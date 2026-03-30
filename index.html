@@ -424,11 +424,17 @@ function renderAllList(data){
   document.getElementById('allCount').textContent=sorted.length;
   document.getElementById('allList').innerHTML=sorted.length?sorted.map(caseItem).join(''):'<div class="no-results">No cases match filters.</div>';
 }
-  <!-- Approver filter JS inserted -->
+</script>
+</body>
+</html>
 
-// ---- Approver Filter: Full Working Version ----
+<!-- Approver filter JS inserted -->
+<script>
+  // -------------------- APPROVER FILTER (FULL WORKING VERSION) --------------------
+
 let activeApprover = "";
 
+// Populate Approver Dropdown
 function populateApproverFilter() {
     const sel = document.getElementById("approverFilter");
 
@@ -446,6 +452,7 @@ function populateApproverFilter() {
     });
 }
 
+// Apply All Filters
 function applyFilters() {
     activeLead = document.getElementById("leadFilter").value || "";
     activeArea = document.getElementById("areaFilter").value || "";
@@ -461,7 +468,7 @@ function applyFilters() {
         if (activeLead && r.lead !== activeLead) return false;
         if (activeArea && r.area !== activeArea) return false;
 
-        // ✅ new approver rule
+        // ✅ NEW APPROVER FILTER
         if (activeApprover && r.approver !== activeApprover) return false;
 
         return true;
@@ -474,6 +481,7 @@ function applyFilters() {
     renderLists(filtered);
 }
 
+// Clear Filters
 function clearFilters() {
     activeType = "ALL";
     activeStatus = "ALL";
@@ -488,10 +496,6 @@ function clearFilters() {
     applyFilters();
 }
 
-// initialise approver dropdown
+// Initialise Approver Dropdown
 populateApproverFilter();
-
 </script>
-</body>
-</html>
-
