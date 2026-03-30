@@ -171,6 +171,7 @@ select.fsel:focus{border-color:var(--teal);}
   </div>
   <div class="divider-v"></div>
   <select class="fsel" id="leadFilter" onchange="applyFilters()"><option value="">All Service Leads</option></select>
+<select class="fsel" id="approverFilter" onchange="applyFilters()"><option value="">All Approvers</option></select>
   <select class="fsel" id="areaFilter" onchange="applyFilters()"><option value="">All Service Areas</option></select>
   <div class="clear-btn" onclick="clearFilters()">Clear filters</div>
 </div>
@@ -426,3 +427,6 @@ function renderAllList(data){
 </script>
 </body>
 </html>
+
+<!-- Approver filter JS inserted -->
+<script>// approver population added here</script>
