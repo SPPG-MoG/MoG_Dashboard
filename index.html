@@ -430,3 +430,67 @@ function renderAllList(data){
 
 <!-- Approver filter JS inserted -->
 <script>// approver population added here</script>
+Updated Approver Filter Code
+
+// ---- Approver Filter: Full Working Version ----
+function populateApproverFilter() {
+    const approverSelect = document.getElementById("approverFilter");
+
+    const approvers = [...new Set(
+        RAW
+            .map(r => r.approver?.trim())
+            .filter(a => a && a !== "")
+    )].sort();
+
+    approvers.forEach(a => {
+        const opt = document.createElement("option");
+        opt.value = a;
+        opt.textContent = a;
+        approverSelect.appendChild(opt);
+    });
+}
+
+let activeApprover = "";
+
+function applyFilters() {
+    activeLead = document.getElementById("leadFilter").value || "";
+    activeArea = document.getElementById("areaFilter").value || "";
+    activeApprover = document.getElementById("approverFilter").value || "";
+
+    const filtered = RAW.filter(r => {
+        return (
+            (activeType === "ALL" || r.type === activeType) &&
+            (activeStatus === "ALL" ||
+                (activeStatus === "OPEN" && r.isOpen) ||
+                (activeStatus === "OVERDUE" && r.isOverdue) ||
+                (activeStatus === "CLOSED" && r.isClosed)
+            ) &&
+            (activeLead === "" || r.lead === activeLead) &&
+            (activeArea === "" || r.area === activeArea) &&
+            (activeApprover === "" || r.approver === activeApprover)
+        );
+    });
+
+    renderAll(filtered);
+    renderKPIs(filtered);
+    renderCaseTypes(filtered);
+    renderCharts(filtered);
+    renderLists(filtered);
+}
+
+function clearFilters() {
+    activeType = "ALL";
+    activeStatus = "ALL";
+    activeLead = "";
+    activeArea = "";
+    activeApprover = "";
+
+    document.getElementById("leadFilter").value = "";
+    document.getElementById("areaFilter").value = "";
+    document.getElementById("approverFilter").value = "";
+
+    applyFilters();
+}
+
+populateApproverFilter();
+
