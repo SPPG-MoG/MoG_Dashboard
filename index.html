@@ -424,33 +424,27 @@ function renderAllList(data){
   document.getElementById('allCount').textContent=sorted.length;
   document.getElementById('allList').innerHTML=sorted.length?sorted.map(caseItem).join(''):'<div class="no-results">No cases match filters.</div>';
 }
-</script>
-</body>
-</html>
-
-<!-- Approver filter JS inserted -->
-<script>// approver population added here</script>
-Updated Approver Filter Code
+  <!-- Approver filter JS inserted -->
 
 // ---- Approver Filter: Full Working Version ----
+let activeApprover = "";
+
 function populateApproverFilter() {
-    const approverSelect = document.getElementById("approverFilter");
+    const sel = document.getElementById("approverFilter");
 
     const approvers = [...new Set(
         RAW
-            .map(r => r.approver?.trim())
-            .filter(a => a && a !== "")
+            .map(r => (r.approver || "").trim())
+            .filter(a => a !== "")
     )].sort();
 
     approvers.forEach(a => {
         const opt = document.createElement("option");
         opt.value = a;
         opt.textContent = a;
-        approverSelect.appendChild(opt);
+        sel.appendChild(opt);
     });
 }
-
-let activeApprover = "";
 
 function applyFilters() {
     activeLead = document.getElementById("leadFilter").value || "";
@@ -458,17 +452,19 @@ function applyFilters() {
     activeApprover = document.getElementById("approverFilter").value || "";
 
     const filtered = RAW.filter(r => {
-        return (
-            (activeType === "ALL" || r.type === activeType) &&
-            (activeStatus === "ALL" ||
-                (activeStatus === "OPEN" && r.isOpen) ||
-                (activeStatus === "OVERDUE" && r.isOverdue) ||
-                (activeStatus === "CLOSED" && r.isClosed)
-            ) &&
-            (activeLead === "" || r.lead === activeLead) &&
-            (activeArea === "" || r.area === activeArea) &&
-            (activeApprover === "" || r.approver === activeApprover)
-        );
+        if (activeType !== "ALL" && r.type !== activeType) return false;
+
+        if (activeStatus === "OPEN" && !r.isOpen) return false;
+        if (activeStatus === "CLOSED" && !r.isClosed) return false;
+        if (activeStatus === "OVERDUE" && !r.isOverdue) return false;
+
+        if (activeLead && r.lead !== activeLead) return false;
+        if (activeArea && r.area !== activeArea) return false;
+
+        // ✅ new approver rule
+        if (activeApprover && r.approver !== activeApprover) return false;
+
+        return true;
     });
 
     renderAll(filtered);
@@ -492,5 +488,10 @@ function clearFilters() {
     applyFilters();
 }
 
+// initialise approver dropdown
 populateApproverFilter();
+
+</script>
+</body>
+</html>
 
