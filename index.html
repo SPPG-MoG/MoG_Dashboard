@@ -348,8 +348,34 @@ function filtered(){
 function toggleType(t,el){activeType=t;document.querySelectorAll('#typeFilters .ftag').forEach(function(e){e.classList.remove('active');});el.classList.add('active');applyFilters();}
 function toggleStatus(s,el){activeStatus=s;document.querySelectorAll('#statusFilters .ftag').forEach(function(e){e.classList.remove('active','active-red','active-amber');});el.classList.add(s==='OVERDUE'?'active-red':s==='OPEN'?'active-amber':'active');applyFilters();}
 function clearFilters(){activeType='ALL';activeStatus='ALL';activeLead='';activeArea='';document.querySelectorAll('#typeFilters .ftag').forEach(function(e,i){e.classList.toggle('active',i===0);});document.querySelectorAll('#statusFilters .ftag').forEach(function(e,i){e.classList.toggle('active',i===0);e.classList.remove('active-red','active-amber');});document.getElementById('leadFilter').value='';document.getElementById('areaFilter').value='';applyFilters();}
-function applyFilters(){activeLead=document.getElementById('leadFilter').value;activeArea=document.getElementById('areaFilter').value;renderAll();}
+function applyFilters() {
+    activeLead = document.getElementById("leadFilter").value || "";
+    activeArea = document.getElementById("areaFilter").value || "";
+    activeApprover = document.getElementById("approverFilter").value || "";
 
+    const data = RAW.filter(r => {
+        if (activeType !== "ALL" && r.type !== activeType) return false;
+        if (activeStatus === "OPEN" && !r.isOpen) return false;
+        if (activeStatus === "OVERDUE" && !r.isOverdue) return false;
+        if (activeStatus === "CLOSED" && !r.isClosed) return false;
+        if (activeLead && r.lead.trim() !== activeLead) return false;
+        if (activeArea && r.area.trim() !== activeArea) return false;
+        if (activeApprover && r.approver.trim() !== activeApprover) return false;
+        return true;
+    });
+
+    // ✅ Use the existing full rendering pipeline
+    renderAll(data);
+    renderKPIs(data);
+    renderUrgency(data);
+    renderCaseTypes(data);
+    renderRing(data);
+    renderAreaChart(data);
+    renderLeadChart(data);
+    renderOverdueList(data);
+    renderDueSoonList(data);
+    renderAllList(data);
+}
 function renderAll(){var data=filtered();renderKPIs(data);renderUrgency(data);renderCaseTypes(data);renderRing(data);renderAreaChart(data);renderLeadChart(data);renderOverdueList(data);renderDueSoonList(data);renderAllList(data);}
 
 function renderKPIs(data){
