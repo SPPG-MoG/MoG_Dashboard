@@ -239,16 +239,15 @@ select.fsel:focus{border-color:var(--teal);}
 let RAW = [];
 
 // ---------------- LOAD JSON ---------------- //
-
 fetch("MasterLog.json")
   .then(r => r.json())
   .then(data => {
       RAW = data;
       console.log("MasterLog loaded:", RAW.length, "records");
 
-      // ✅ these MUST run here
-      initDropdowns();    
-      setSnapshotDate();  
+      // Populate dropdowns and snapshot AFTER RAW loads
+      initDropdowns();
+      setSnapshotDate();
   })
   .catch(err => {
       console.error("Error loading MasterLog.json:", err);
@@ -257,23 +256,33 @@ fetch("MasterLog.json")
 
 var activeType='ALL', activeStatus='ALL', activeLead='', activeArea='', activeApprover='';
 
+
 // ---------------- GATE ---------------- //
 function gateCheck(){
   const e = document.getElementById('gEmail').value.trim().toLowerCase();
   const err = document.getElementById('gErr');
   const inp = document.getElementById('gEmail');
 
-  if(!e){err.textContent='Please enter your email.'; inp.classList.add('err'); return;}
-  if(!e.endsWith('@hscni.net')){err.textContent='Access restricted to @hscni.net addresses only.'; inp.classList.add('err'); return;}
+  if(!e){
+      err.textContent='Please enter your email.';
+      inp.classList.add('err'); 
+      return;
+  }
+  if(!e.endsWith('@hscni.net')){
+      err.textContent='Access restricted to @hscni.net addresses only.';
+      inp.classList.add('err'); 
+      return;
+  }
 
   err.textContent='';
   inp.classList.remove('err');
 
   document.getElementById('gate').classList.add('gone');
 
-  // ✅ now RAW + dropdowns are ready
   renderAll(filtered());
 }
+
+
 // ---------------- SNAPSHOT DATE ---------------- //
 function setSnapshotDate(){
     const today = new Date();
@@ -283,27 +292,55 @@ function setSnapshotDate(){
     document.getElementById('snapshotTag').textContent = `Data snapshot: ${d} ${m} ${y}`;
 }
 
+
 // ---------------- DROPDOWNS ---------------- //
 function initDropdowns(){
-    const leads=[...new Set(RAW.map(r=>r.lead).filter(l=>l && l!=='Transferred' && l!=='Orphan').map(l=>l.trim()))].sort();
-    const areas=[...new Set(RAW.map(r=>r.area.trim()).filter(Boolean))].sort();
+
+    const leads=[...new Set(
+        RAW.map(r=>r.lead)
+           .filter(l=>l && l!=='Transferred' && l!=='Orphan')
+           .map(l=>l.trim())
+    )].sort();
+
+    const areas=[...new Set(
+        RAW.map(r=>r.area.trim()).filter(Boolean)
+    )].sort();
 
     const ls=document.getElementById('leadFilter');
-    leads.forEach(l => { let o=document.createElement('option'); o.value=l; o.textContent=l; ls.appendChild(o); });
+    leads.forEach(l=>{
+        let o=document.createElement('option');
+        o.value=l; 
+        o.textContent=l;
+        ls.appendChild(o);
+    });
 
     const as=document.getElementById('areaFilter');
-    areas.forEach(a => { let o=document.createElement('option'); o.value=a; o.textContent=a; as.appendChild(o); });
+    areas.forEach(a=>{
+        let o=document.createElement('option');
+        o.value=a; 
+        o.textContent=a;
+        as.appendChild(o);
+    });
 
     populateApproverFilter();
 }
 
 function populateApproverFilter(){
     const sel=document.getElementById('approverFilter');
-    const approvers=[...new Set(RAW.map(r=>(r.approver||'').trim()).filter(a=>a!=='').sort())];
-    approvers.forEach(a=>{ let o=document.createElement('option'); o.value=a; o.textContent=a; sel.appendChild(o); });
+    const approvers=[...new Set(
+        RAW.map(r=>(r.approver||'').trim()).filter(a=>a!=="")
+    )].sort();
+
+    approvers.forEach(a=>{
+        let o=document.createElement('option');
+        o.value=a;
+        o.textContent=a;
+        sel.appendChild(o);
+    });
 }
 
-// ---------------- FILTERING ---------------- //
+
+// ---------------- FILTER ENGINE ---------------- //
 function filtered(){
   return RAW.filter(r=>{
     if(activeType!=='ALL' && r.type!==activeType) return false;
@@ -318,33 +355,55 @@ function filtered(){
 }
 
 function applyFilters(){
-    activeLead = document.getElementById('leadFilter').value || "";
-    activeArea = document.getElementById('areaFilter').value || "";
-    activeApprover = document.getElementById('approverFilter').value || "";
+    activeLead    = document.getElementById('leadFilter').value || "";
+    activeArea    = document.getElementById('areaFilter').value || "";
+    activeApprover= document.getElementById('approverFilter').value || "";
     renderAll(filtered());
 }
 
 function toggleType(t,el){
-    activeType=t;
+    activeType = t;
     document.querySelectorAll('#typeFilters .ftag').forEach(e=>e.classList.remove('active'));
     el.classList.add('active');
     renderAll(filtered());
 }
 
 function toggleStatus(s,el){
-    activeStatus=s;
-    document.querySelectorAll('#statusFilters .ftag').forEach(e=>e.classList.remove('active','active-red','active-amber'));
-    el.classList.add(s==='OVERDUE'?'active-red':s==='OPEN'?'active-amber':'active');
+    activeStatus = s;
+    document.querySelectorAll('#statusFilters .ftag')
+      .forEach(e=>e.classList.remove('active','active-red','active-amber'));
+
+    el.classList.add(
+        s==='OVERDUE' ? 'active-red' :
+        s==='OPEN'    ? 'active-amber' : 'active'
+    );
+
     renderAll(filtered());
 }
 
 function clearFilters(){
-    activeType='ALL'; activeStatus='ALL'; activeLead=''; activeArea=''; activeApprover='';
-    document.querySelectorAll('#leadFilter,#areaFilter,#approverFilter').forEach(el=>el.value='');
+    activeType='ALL';
+    activeStatus='ALL';
+    activeLead='';
+    activeArea='';
+    activeApprover='';
+
+    document.getElementById('leadFilter').value='';
+    document.getElementById('areaFilter').value='';
+    document.getElementById('approverFilter').value='';
+
+    document.querySelectorAll('#typeFilters .ftag')
+      .forEach((e,i)=>e.classList.toggle('active',i===0));
+
+    document.querySelectorAll('#statusFilters .ftag')
+      .forEach((e,i)=>{e.classList.toggle('active',i===0); 
+                       e.classList.remove('active-red','active-amber');});
+
     renderAll(filtered());
 }
 
-// ---------------- RENDER ALL ---------------- //
+
+// ---------------- MASTER RENDER CONTROLLER ---------------- //
 function renderAll(data){
     renderKPIs(data);
     renderUrgency(data);
@@ -358,11 +417,291 @@ function renderAll(data){
     renderAllList(data);
 }
 
-// ---------------- EXISTING RENDER FUNCTIONS ---------------- //
-// ✅ KEEP all your renderKPIs, renderUrgency, renderCaseTypes...
-// ✅ KEEP renderLeadChart, renderApproverChart, renderAreaChart, etc.
-// ✅ DO NOT duplicate renderAll() again below.
-// Paste all remaining functions unchanged.
+
+// ---------------- KPI RENDERING ---------------- //
+function renderKPIs(data){
+  const open        = data.filter(r=>r.isOpen).length;
+  const overdue     = data.filter(r=>r.isOverdue).length;
+  const closed      = data.filter(r=>r.isClosed).length;
+  const transferred = data.filter(r=>r.status==='Transferred').length;
+
+  const pctOverdue  = open>0 ? Math.round(overdue/open*100) : 0;
+  const closedOnTime= data.filter(r=>r.isClosed && r.onTime===true).length;
+  const pctOnTime   = closed>0? Math.round(closedOnTime/closed*100):0;
+
+  const turns=data
+      .filter(r=>r.isClosed && r.turnaround!==null && r.turnaround>=0)
+      .map(r=>r.turnaround);
+
+  const avgTurn = turns.length>0 ? Math.round(turns.reduce((a,b)=>a+b,0)/turns.length):0;
+
+  document.getElementById('kOpenCases').textContent=open;
+  document.getElementById('kOverdue').textContent=overdue;
+  document.getElementById('kPctOverdue').textContent=pctOverdue+'%';
+  document.getElementById('kClosed').textContent=closed;
+  document.getElementById('kOnTime').textContent=pctOnTime+'%';
+  document.getElementById('kAvgTurn').textContent=avgTurn+'d';
+  document.getElementById('kTotal').textContent=data.length;
+  document.getElementById('kTransferred').textContent=transferred;
+}
+
+
+// ---------------- URGENCY BOXES ---------------- //
+function renderUrgency(data){
+  const open=data.filter(r=>r.isOpen && !r.isOverdue);
+
+  document.getElementById('uDue1').textContent =
+      open.filter(r=>r.daysUntilDue!==null && r.daysUntilDue<=1 && r.daysUntilDue>=0).length;
+
+  document.getElementById('uDue3').textContent =
+      open.filter(r=>r.daysUntilDue!==null && r.daysUntilDue<=3 && r.daysUntilDue>=0).length;
+
+  document.getElementById('uDue5').textContent =
+      open.filter(r=>r.daysUntilDue!==null && r.daysUntilDue<=5 && r.daysUntilDue>=0).length;
+
+  document.getElementById('uDue10').textContent =
+      open.filter(r=>r.daysUntilDue!==null && r.daysUntilDue<=10 && r.daysUntilDue>=0).length;
+}
+
+
+// ---------------- CASE TYPE GRID ---------------- //
+function renderCaseTypes(data){
+  ['AQW','AQO','COR','INV','TOF'].forEach(t=>{
+      const subset=data.filter(r=>r.type===t);
+      const open=subset.filter(r=>r.isOpen).length;
+
+      document.getElementById('ct-'+t).textContent=subset.length;
+      document.getElementById('ctsub-'+t).textContent=open+' open';
+  });
+
+  document.getElementById('ctBadge').textContent =
+      activeType==='ALL' ? 'All types' : activeType;
+}
+
+
+// ---------------- RING CHART ---------------- //
+function renderRing(data){
+  const closed = data.filter(r=>r.isClosed);
+  const onTime = closed.filter(r=>r.onTime===true).length;
+  const late   = closed.filter(r=>r.onTime===false).length;
+  const overdue= data.filter(r=>r.isOverdue).length;
+  const openOk = data.filter(r=>r.isOpen && !r.isOverdue).length;
+
+  const total = onTime+late+overdue+openOk || 1;
+  const pct   = closed.length>0 ? Math.round(onTime/closed.length*100):0;
+
+  document.getElementById('ringPct').textContent=pct+'%';
+  document.getElementById('rl-ontime').textContent   = `${onTime} completed on time`;
+  document.getElementById('rl-late').textContent     = `${late} completed late`;
+  document.getElementById('rl-overdue').textContent  = `${overdue} open & overdue`;
+  document.getElementById('rl-open').textContent     = `${openOk} open & on track`;
+
+  const canvas=document.getElementById('ringCanvas'); 
+  if(!canvas) return;
+
+  const ctx=canvas.getContext('2d');
+  const cx=65, cy=65, r=48, lw=14;
+  ctx.clearRect(0,0,130,130);
+
+  const segments=[
+      {val:onTime,color:'#16a34a'},
+      {val:late,color:'#d97706'},
+      {val:overdue,color:'#dc2626'},
+      {val:openOk,color:'#0d9488'}
+  ].filter(s=>s.val>0);
+
+  if(!segments.length){
+      ctx.beginPath();
+      ctx.arc(cx,cy,r,0,2*Math.PI);
+      ctx.strokeStyle='#f1f5f9'; 
+      ctx.lineWidth=lw;
+      ctx.stroke();
+      return;
+  }
+
+  let start=-Math.PI/2;
+  const gap=0.03;
+  const totalGap=gap*segments.length;
+
+  segments.forEach(s=>{
+      const sweep=(s.val/total)*(2*Math.PI-totalGap);
+      ctx.beginPath();
+      ctx.arc(cx,cy,r,start,start+sweep);
+      ctx.strokeStyle=s.color;
+      ctx.lineWidth=lw;
+      ctx.lineCap='round';
+      ctx.stroke();
+      start+=sweep+gap;
+  });
+}
+
+
+// ---------------- BAR TEMPLATE ---------------- //
+function bar(label,count,max,cls){
+    const pct=max>0 ? Math.round(count/max*100) : 0;
+    return `
+        <div class="bar-row">
+            <div class="bar-label" title="${label}">${label}</div>
+            <div class="bar-track">
+                <div class="bar-fill ${cls||''}" style="width:${pct}%"></div>
+            </div>
+            <div class="bar-count">${count}</div>
+        </div>`;
+}
+
+
+// ---------------- AREA CHART ---------------- //
+function renderAreaChart(data){
+  const open=data.filter(r=>r.isOpen);
+  const counts={};
+
+  open.forEach(r=>{
+      const a=r.area.trim();
+      counts[a]=(counts[a]||0)+1;
+  });
+
+  const sorted=Object.entries(counts)
+      .sort((a,b)=>b[1]-a[1])
+      .slice(0,15);
+
+  const max=sorted.length?sorted[0][1]:1;
+
+  document.getElementById('areaChart').innerHTML =
+      sorted.length
+      ? sorted.map(e=>bar(e[0],e[1],max,'teal')).join('')
+      : '<div class="no-results">No open cases.</div>';
+}
+
+
+// ---------------- LEAD WORKLOAD ---------------- //
+function renderLeadChart(data){
+  const open=data.filter(r=>r.isOpen && r.lead!=='Transferred');
+  const counts={};
+
+  open.forEach(r=>{
+      const l=r.lead.trim();
+      counts[l]=(counts[l]||0)+1;
+  });
+
+  const sorted=Object.entries(counts)
+      .sort((a,b)=>b[1]-a[1])
+      .slice(0,12);
+
+  const max=sorted.length?sorted[0][1]:1;
+
+  document.getElementById('leadChart').innerHTML =
+      sorted.length
+      ? sorted.map(e=>{
+            const lead=e[0];
+            const total=e[1];
+            const overdue=open.filter(r=>r.lead.trim()===lead && r.isOverdue).length;
+
+            const cls = overdue>total*0.7 ? 'red'
+                      : overdue>total*0.4 ? 'amber'
+                      : 'teal';
+
+            return bar(lead,total,max,cls);
+        }).join('')
+      : '<div class="no-results">No data.</div>';
+}
+
+
+// ---------------- APPROVER WORKLOAD ---------------- //
+function renderApproverChart(data){
+  const open=data.filter(r=>r.isOpen && r.approver!=="Transferred");
+  const counts={};
+
+  open.forEach(r=>{
+      const a=r.approver.trim();
+      if(!a) return;
+      counts[a]=(counts[a]||0)+1;
+  });
+
+  const sorted=Object.entries(counts)
+      .sort((a,b)=>b[1]-a[1])
+      .slice(0,12);
+
+  const max=sorted.length?sorted[0][1]:1;
+
+  document.getElementById('approverChart').innerHTML =
+      sorted.length
+      ? sorted.map(e=>{
+            const approver=e[0];
+            const total=e[1];
+            const overdue=open.filter(r=>r.approver.trim()===approver && r.isOverdue).length;
+
+            const cls = overdue>total*0.7 ? 'red'
+                      : overdue>total*0.4 ? 'amber'
+                      : 'teal';
+
+            return bar(approver,total,max,cls);
+        }).join('')
+      : '<div class="no-results">No data.</div>';
+}
+
+
+// ---------------- CASE LISTS ---------------- //
+function statusPill(r){
+  if(r.isOverdue) return '<span class="status-pill pill-red">Overdue</span>';
+  if(r.isClosed && r.onTime===true)  return '<span class="status-pill pill-green">On Time</span>';
+  if(r.isClosed && r.onTime===false) return '<span class="status-pill pill-amber">Late</span>';
+  if(r.isClosed) return '<span class="status-pill pill-blue">Closed</span>';
+  if(r.isOpen)   return '<span class="status-pill pill-blue">In Progress</span>';
+  return `<span class="status-pill pill-amber">${r.status}</span>`;
+}
+
+function daysTag(r){
+  if(!r.isOpen) return '';
+  if(r.isOverdue) return `<div class="case-days overdue-days">${Math.abs(r.daysUntilDue||0)}d overdue</div>`;
+  if(r.daysUntilDue!==null && r.daysUntilDue<=5) 
+      return `<div class="case-days due-days">Due in ${r.daysUntilDue}d</div>`;
+  return '';
+}
+
+function caseItem(r){
+  return `
+    <div class="case-item">
+        <div class="case-ref">${r.ref.trim()}</div>
+        <div class="case-meta">
+            <div class="case-area">${r.area}</div>
+            <div class="case-lead">${r.lead} · ${r.type} · Due: ${r.due||'—'}</div>
+        </div>
+        <div class="case-status">${statusPill(r)}${daysTag(r)}</div>
+    </div>`;
+}
+
+function renderOverdueList(data){
+  const items=data.filter(r=>r.isOverdue)
+                  .sort((a,b)=>(a.daysUntilDue||0)-(b.daysUntilDue||0));
+
+  document.getElementById('overdueCount').textContent=items.length;
+  document.getElementById('overdueList').innerHTML =
+      items.length ? items.map(caseItem).join('')
+                   : '<div class="no-results">No overdue cases 🎉</div>';
+}
+
+function renderDueSoonList(data){
+  const items=data.filter(r=>r.isOpen && !r.isOverdue && r.daysUntilDue!==null && r.daysUntilDue<=5)
+                  .sort((a,b)=>a.daysUntilDue-b.daysUntilDue);
+
+  document.getElementById('dueSoonCount').textContent=items.length;
+  document.getElementById('dueSoonList').innerHTML =
+      items.length ? items.map(caseItem).join('')
+                   : '<div class="no-results">No cases due in 5 days.</div>';
+}
+
+function renderAllList(data){
+  const sorted=[...data].sort((a,b)=>{
+      if(a.isOverdue && !b.isOverdue) return -1;
+      if(!a.isOverdue && b.isOverdue) return 1;
+      return (a.daysUntilDue||999)-(b.daysUntilDue||999);
+  });
+
+  document.getElementById('allCount').textContent=sorted.length;
+  document.getElementById('allList').innerHTML =
+      sorted.length ? sorted.map(caseItem).join('')
+                    : '<div class="no-results">No cases match filters.</div>';
+}
 
 </script>
 </body>
