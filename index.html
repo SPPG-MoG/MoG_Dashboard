@@ -226,6 +226,9 @@ select.fsel:focus{border-color:var(--teal);}
   <div class="grid-2" style="margin-bottom:20px;">
     <div class="panel"><div class="panel-title">Top Service Areas <span class="panel-badge">Open cases</span></div><div class="scroll-panel" id="areaChart"></div></div>
     <div class="panel"><div class="panel-title">Service Leads — Workload <span class="panel-badge">Open cases</span></div><div class="scroll-panel" id="leadChart"></div></div>
+   <div class="panel"><div class="panel-title">Approvers — Workload <span class="panel-badge">Open cases</span></div><div class="scroll-panel" id="approverChart"></div>
+</div>
+
   </div>
   <div class="panel" style="margin-bottom:20px;"><div class="panel-title">Overdue Open Cases <span class="panel-badge" id="overdueCount">0</span></div><div class="scroll-panel" id="overdueList"></div></div>
   <div class="panel" style="margin-bottom:20px;"><div class="panel-title">Due in Next 5 Days <span class="panel-badge" id="dueSoonCount">0</span></div><div class="scroll-panel" id="dueSoonList"></div></div>
@@ -348,10 +351,24 @@ function filtered(){
 function toggleType(t,el){activeType=t;document.querySelectorAll('#typeFilters .ftag').forEach(function(e){e.classList.remove('active');});el.classList.add('active');applyFilters();}
 function toggleStatus(s,el){activeStatus=s;document.querySelectorAll('#statusFilters .ftag').forEach(function(e){e.classList.remove('active','active-red','active-amber');});el.classList.add(s==='OVERDUE'?'active-red':s==='OPEN'?'active-amber':'active');applyFilters();}
 function clearFilters(){activeType='ALL';activeStatus='ALL';activeLead='';activeArea='';document.querySelectorAll('#typeFilters .ftag').forEach(function(e,i){e.classList.toggle('active',i===0);});document.querySelectorAll('#statusFilters .ftag').forEach(function(e,i){e.classList.toggle('active',i===0);e.classList.remove('active-red','active-amber');});document.getElementById('leadFilter').value='';document.getElementById('areaFilter').value='';applyFilters();}
-function applyFilters() {
-    activeLead = document.getElementById("leadFilter").value || "";
-    activeArea = document.getElementById("areaFilter").value || "";
-    activeApprover = document.getElementById("approverFilter").value || "";
+function applyFilters(){
+    activeLead = document.getElementById('leadFilter').value || "";
+    activeArea = document.getElementById('areaFilter').value || "";
+    activeApprover = document.getElementById('approverFilter').value || "";
+
+    var data = RAW.filter(r => {
+        if (activeType !== 'ALL' && r.type !== activeType) return false;
+        if (activeStatus === 'OPEN' && !r.isOpen) return false;
+        if (activeStatus === 'OVERDUE' && !r.isOverdue) return false;
+        if (activeStatus === 'CLOSED' && !r.isClosed) return false;
+        if (activeLead && r.lead.trim() !== activeLead) return false;
+        if (activeArea && r.area.trim() !== activeArea) return false;
+        if (activeApprover && r.approver.trim() !== activeApprover) return false;
+        return true;
+    });
+
+    renderAll(data);
+}
 
     const data = RAW.filter(r => {
         if (activeType !== "ALL" && r.type !== activeType) return false;
@@ -372,10 +389,11 @@ function applyFilters() {
     renderRing(data);
     renderAreaChart(data);
     renderLeadChart(data);
+    renderApproverChart(data);
     renderOverdueList(data);
     renderDueSoonList(data);
     renderAllList(data);
-}
+    }
 function renderAll(){var data=filtered();renderKPIs(data);renderUrgency(data);renderCaseTypes(data);renderRing(data);renderAreaChart(data);renderLeadChart(data);renderOverdueList(data);renderDueSoonList(data);renderAllList(data);}
 
 function renderKPIs(data){
@@ -499,6 +517,42 @@ function renderAllList(data){
   document.getElementById('allCount').textContent=sorted.length;
   document.getElementById('allList').innerHTML=sorted.length?sorted.map(caseItem).join(''):'<div class="no-results">No cases match filters.</div>';
 }
+
+function renderApproverChart(data){
+    var open = data.filter(r => r.isOpen && r.approver !== "Transferred");
+    var counts = {};
+
+    open.forEach(r => {
+        var a = r.approver.trim();
+        if (!a) return;
+        counts[a] = (counts[a] || 0) + 1;
+    });
+
+    var sorted = Object.entries(counts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 12);
+
+    var max = sorted.length ? sorted[0][1] : 1;
+
+    document.getElementById("approverChart").innerHTML =
+        sorted.length
+        ? sorted
+            .map(e => {
+                var approver = e[0];
+                var total = e[1];
+                var overdue = open.filter(r => r.approver.trim() === approver && r.isOverdue).length;
+
+                var cls =
+                    overdue > total * 0.7 ? "red" :
+                    overdue > total * 0.4 ? "amber" :
+                    "teal";
+
+                return bar(approver, total, max, cls);
+            })
+            .join("")
+        : '<div class="no-results">No data.</div>';
+}
+
 </script>
 </body>
 </html>
