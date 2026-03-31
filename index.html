@@ -239,13 +239,16 @@ select.fsel:focus{border-color:var(--teal);}
 let RAW = [];
 
 // ---------------- LOAD JSON ---------------- //
+
 fetch("MasterLog.json")
   .then(r => r.json())
   .then(data => {
       RAW = data;
       console.log("MasterLog loaded:", RAW.length, "records");
-      initDropdowns();
-      setSnapshotDate();
+
+      // ✅ these MUST run here
+      initDropdowns();    
+      setSnapshotDate();  
   })
   .catch(err => {
       console.error("Error loading MasterLog.json:", err);
@@ -268,9 +271,9 @@ function gateCheck(){
 
   document.getElementById('gate').classList.add('gone');
 
+  // ✅ now RAW + dropdowns are ready
   renderAll(filtered());
 }
-
 // ---------------- SNAPSHOT DATE ---------------- //
 function setSnapshotDate(){
     const today = new Date();
