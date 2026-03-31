@@ -283,17 +283,54 @@ function loadData(){
     });
 }
 
+
 function setSnapshotDate(){
-  document.getElementById('snapshotTag').textContent='Data snapshot: 30 Mar 2026';
+    const today = new Date();
+    const d = today.getDate().toString().padStart(2, '0');
+    const m = today.toLocaleString('en-GB', { month: 'short' });
+    const y = today.getFullYear();
+    document.getElementById('snapshotTag').textContent = `Data snapshot: ${d} ${m} ${y}`;
 }
 
+
 function initDropdowns(){
-  var leads=[...new Set(RAW.filter(r=>r.lead&&r.lead!=='Transferred'&&r.lead!=='Orphan').map(r=>r.lead.trim()))].sort();
-  var areas=[...new Set(RAW.map(r=>r.area.trim()).filter(Boolean))].sort();
-  var ls=document.getElementById('leadFilter');
-  leads.forEach(function(l){var o=document.createElement('option');o.value=l;o.textContent=l;ls.appendChild(o);});
-  var as=document.getElementById('areaFilter');
-  areas.forEach(function(a){var o=document.createElement('option');o.value=a;o.textContent=a;as.appendChild(o);});
+    var leads=[...new Set(RAW.filter(r=>r.lead&&r.lead!=='Transferred'&&r.lead!=='Orphan').map(r=>r.lead.trim()))].sort(); 
+    var areas=[...new Set(RAW.map(r=>r.area.trim()).filter(Boolean))].sort(); 
+
+    var ls=document.getElementById('leadFilter'); 
+    leads.forEach(function(l){
+        var o=document.createElement('option');
+        o.value=l;
+        o.textContent=l;
+        ls.appendChild(o);
+    }); 
+
+    var as=document.getElementById('areaFilter'); 
+    areas.forEach(function(a){
+        var o=document.createElement('option');
+        o.value=a;
+        o.textContent=a;
+        as.appendChild(o);
+    }); 
+
+    // ✅ NEW: Populate approver dropdown
+    populateApproverFilter();
+}
+
+function populateApproverFilter() {
+    const sel = document.getElementById("approverFilter"); 
+    const approvers = [...new Set(
+        RAW
+            .map(r => (r.approver || "").trim())
+            .filter(a => a !== "")
+    )].sort();
+
+    approvers.forEach(a => { 
+        const opt = document.createElement("option");
+        opt.value = a;
+        opt.textContent = a;
+        sel.appendChild(opt);
+    });
 }
 
 function filtered(){
