@@ -298,9 +298,8 @@ function setSnapshotDate(){
 function initDropdowns(){
 
     const leads=[...new Set(
-        RAW.map(r=>r.lead)
-           .filter(l=>l && l!=='Transferred' && l!=='Orphan')
-           .map(l=>l.trim())
+        RAW.map(r => (r.lead || "").trim().replace(/\u00A0/g, " "))
+   .filter(l => l && l !== "Transferred" && l !== "Orphan")
     )].sort();
 
     const areas=[...new Set(
