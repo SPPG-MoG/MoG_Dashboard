@@ -160,7 +160,7 @@ select.fsel:focus{border-color:var(--teal);}
     <div class="ftag" onclick="toggleType('COR',this)">COR</div>
     <div class="ftag" onclick="toggleType('INV',this)">INV</div>
     <div class="ftag" onclick="toggleType('TOF',this)">TOF</div>
-    <div class="ftag" onclick="toggleType('Transferred',this)">Transferred</div>
+   
   </div>
   <div class="divider-v"></div>
   <span class="filter-label">Status</span>
@@ -203,8 +203,7 @@ select.fsel:focus{border-color:var(--teal);}
         <div class="ct-tile cor"><div class="ct-type">COR</div><span class="ct-num" id="ct-COR">—</span><div class="ct-sub" id="ctsub-COR">—</div></div>
         <div class="ct-tile inv"><div class="ct-type">INV</div><span class="ct-num" id="ct-INV">—</span><div class="ct-sub" id="ctsub-INV">—</div></div>
         <div class="ct-tile tof"><div class="ct-type">TOF</div><span class="ct-num" id="ct-TOF">—</span><div class="ct-sub" id="ctsub-TOF">—</div></div>
-        <div class="ct-tile transferred"><div class="ct-type">Transferred</div><span class="ct-num" id="ct-Transferred">—</span><div class="ct-sub" id="ctsub-Transferred">—</div></div>
-      </div>
+       </div>
     </div>
     <div class="panel">
       <div class="panel-title">Performance Overview</div>
@@ -422,32 +421,172 @@ function renderAll(data){
 
 // ---------------- KPI RENDERING ---------------- //
 function renderKPIs(data){
-  const open        = data.filter(r=>r.isOpen).length;
-  const overdue     = data.filter(r=>r.isOverdue).length;
-  const closed      = data.filter(r=>r.isClosed).length;
-  const transferred = data.filter(r=>r.status==='Transferred').length;
 
-  const pctOverdue  = open>0 ? Math.round(overdue/open*100) : 0;
-  const closedOnTime= data.filter(r=>r.isClosed && r.onTime===true).length;
-  const pctOnTime   = closed>0? Math.round(closedOnTime/closed*100):0;
+  // ✅ Transferred removed from all active KPIs
+  const open = data.filter(r =>
+      r.isOpen && r.status !== 'Transferred'
+  ).length;
 
-  const turns=data
-      .filter(r=>r.isClosed && r.turnaround!==null && r.turnaround>=0)
-      .map(r=>r.turnaround);
+  const overdue = data.filter(r =>
+      r.isOverdue && r.status !== 'Transferred'
+  ).length;
 
-  const avgTurn = turns.length>0 ? Math.round(turns.reduce((a,b)=>a+b,0)/turns.length):0;
+  const closed = data.filter(r =>
+      r.isClosed && r.status !== 'Transferred'
+  ).length;
 
-  document.getElementById('kOpenCases').textContent=open;
-  document.getElementById('kOverdue').textContent=overdue;
-  document.getElementById('kPctOverdue').textContent=pctOverdue+'%';
-  document.getElementById('kClosed').textContent=closed;
-  document.getElementById('kOnTime').textContent=pctOnTime+'%';
-  document.getElementById('kAvgTurn').textContent=avgTurn+'d';
-  document.getElementById('kTotal').textContent=data.length;
-  document.getElementById('kTransferred').textContent=transferred;
+  const transferred = data.filter(r =>
+      r.status === 'Transferred'
+  ).length;
+
+  const pctOverdue = open > 0
+      ? Math.round((overdue / open) * 100)
+      : 0;
+
+  const closedOnTime = data.filter(r =>
+      r.isClosed && r.onTime === true && r.status !== 'Transferred'
+  ).length;
+
+  const pctOnTime = closed > 0
+      ? Math.round((closedOnTime / closed) * 100)
+      : 0;
+
+  const turns = data
+      .filter(r =>
+          r.isClosed &&
+          r.turnaround !== null &&
+          r.turnaround >= 0 &&
+          r.status !== 'Transferred'
+      )
+      .map(r => r.turnaround);
+
+  const avgTurn = turns.length > 0
+      ? Math.round(turns.reduce((a, b) => a + b, 0) / turns.length)
+      : 0;
+
+  document.getElementById('kOpenCases').textContent = open;
+  document.getElementById('kOverdue').textContent = overdue;
+  document.getElementById('kPctOverdue').textContent = pctOverdue + '%';
+  document.getElementById('kClosed').textContent = closed;
+  document.getElementById('kOnTime').textContent = pctOnTime + '%';
+  document.getElementById('kAvgTurn').textContent = avgTurn + 'd';
+  document.getElementById('kTotal').textContent = data.length;
+  document.getElementById('kTransferred').textContent = transferred;
 }
 
 
+// ---------------- OVERDUE CASES ---------------- //
+function renderOverdueList(data){
+  const items = data.filter(r =>
+      r.isOverdue &&
+      r.status !== 'Transferred'
+  ).sort((a,b) => (a.daysUntilDue || 0) - (b.daysUntilDue || 0));
+
+  document.getElementById('overdueCount').textContent = items.length;
+  document.getElementById('overdueList').innerHTML =
+      items.length ? items.map(caseItem).join('') :
+      '<div class="no-results">No overdue cases 🎉</div>';
+}
+
+
+// ---------------- DUE SOON ---------------- //
+function renderDueSoonList(data){
+  const items = data.filter(r =>
+      r.isOpen &&
+      r.status !== 'Transferred' &&
+      !r.isOverdue &&
+      r.daysUntilDue !== null &&
+      r.daysUntilDue <= 5
+  ).sort((a,b)=> a.daysUntilDue - b.daysUntilDue);
+
+  document.getElementById('dueSoonCount').textContent = items.length;
+
+  document.getElementById('dueSoonList').innerHTML =
+      items.length ? items.map(caseItem).join('') :
+      '<div class="no-results">No cases due in 5 days.</div>';
+}
+
+
+// ---------------- ALL CASES (EXCLUDE TRANSFERRED) ---------------- //
+function renderAllList(data){
+  const sorted = [...data]
+      .filter(r => r.status !== 'Transferred')
+      .sort((a,b)=>{
+          if (a.isOverdue && !b.isOverdue) return -1;
+          if (!a.isOverdue && b.isOverdue) return 1;
+          return (a.daysUntilDue || 999) - (b.daysUntilDue || 999);
+      });
+
+  document.getElementById('allCount').textContent = sorted.length;
+
+  document.getElementById('allList').innerHTML =
+      sorted.length ? sorted.map(caseItem).join('') :
+      '<div class="no-results">No cases match filters.</div>';
+}
+
+
+// ---------------- LEAD WORKLOAD ---------------- //
+function renderLeadChart(data){
+  const open = data.filter(r =>
+      r.isOpen && r.status !== 'Transferred'
+  );
+
+  const counts = {};
+  open.forEach(r => {
+      const l = r.lead.trim();
+      counts[l] = (counts[l] || 0) + 1;
+  });
+
+  const sorted = Object.entries(counts)
+      .sort((a,b)=> b[1] - a[1])
+      .slice(0,12);
+
+  const max = sorted.length ? sorted[0][1] : 0;
+
+  document.getElementById('leadChart').innerHTML =
+      sorted.length ? sorted.map(e => {
+          const lead = e[0];
+          const total = e[1];
+          const overdue = open.filter(r => r.lead.trim() === lead && r.isOverdue).length;
+          const cls = overdue > total * 0.7 ? 'red'
+                    : overdue > total * 0.4 ? 'amber'
+                    : 'teal';
+          return bar(lead, total, max, cls);
+      }).join('')
+      : '<div class="no-results">No data.</div>';
+}
+
+
+// ---------------- APPROVER WORKLOAD ---------------- //
+function renderApproverChart(data){
+  const open = data.filter(r =>
+      r.isOpen && r.status !== 'Transferred'
+  );
+
+  const counts = {};
+  open.forEach(r => {
+      const a = r.approver.trim();
+      if (a) counts[a] = (counts[a] || 0) + 1;
+  });
+
+  const sorted = Object.entries(counts)
+      .sort((a,b)=> b[1] - a[1])
+      .slice(0,12);
+
+  const max = sorted.length ? sorted[0][1] : 0;
+
+  document.getElementById('approverChart').innerHTML =
+      sorted.length ? sorted.map(e => {
+          const approver = e[0];
+          const total = e[1];
+          const overdue = open.filter(r => r.approver.trim() === approver && r.isOverdue).length;
+          const cls = overdue > total * 0.7 ? 'red'
+                    : overdue > total * 0.4 ? 'amber'
+                    : 'teal';
+          return bar(approver, total, max, cls);
+      }).join('')
+      : '<div class="no-results">No data.</div>';
+}
 // ---------------- URGENCY BOXES ---------------- //
 function renderUrgency(data){
   const open=data.filter(r=>r.isOpen && !r.isOverdue);
