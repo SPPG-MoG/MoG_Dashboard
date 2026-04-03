@@ -586,21 +586,44 @@ function renderApproverChart(data){
       }).join('')
       : '<div class="no-results">No data.</div>';
 }
+  
 // ---------------- URGENCY BOXES ---------------- //
 function renderUrgency(data){
-  const open=data.filter(r=>r.isOpen && !r.isOverdue);
+
+  // ✅ Only active, non-transferred open cases
+  const open = data.filter(r =>
+      r.isOpen &&
+      r.status !== 'Transferred' &&   // <-- FIX
+      !r.isOverdue
+  );
 
   document.getElementById('uDue1').textContent =
-      open.filter(r=>r.daysUntilDue!==null && r.daysUntilDue<=1 && r.daysUntilDue>=0).length;
+      open.filter(r =>
+          r.daysUntilDue !== null &&
+          r.daysUntilDue <= 1 &&
+          r.daysUntilDue >= 0
+      ).length;
 
   document.getElementById('uDue3').textContent =
-      open.filter(r=>r.daysUntilDue!==null && r.daysUntilDue<=3 && r.daysUntilDue>=0).length;
+      open.filter(r =>
+          r.daysUntilDue !== null &&
+          r.daysUntilDue <= 3 &&
+          r.daysUntilDue >= 0
+      ).length;
 
   document.getElementById('uDue5').textContent =
-      open.filter(r=>r.daysUntilDue!==null && r.daysUntilDue<=5 && r.daysUntilDue>=0).length;
+      open.filter(r =>
+          r.daysUntilDue !== null &&
+          r.daysUntilDue <= 5 &&
+          r.daysUntilDue >= 0
+      ).length;
 
   document.getElementById('uDue10').textContent =
-      open.filter(r=>r.daysUntilDue!==null && r.daysUntilDue<=10 && r.daysUntilDue>=0).length;
+      open.filter(r =>
+          r.daysUntilDue !== null &&
+          r.daysUntilDue <= 10 &&
+          r.daysUntilDue >= 0
+      ).length;
 }
 
 
