@@ -246,7 +246,6 @@ fetch("MasterLog.json")
       RAW = data;
       console.log("MasterLog loaded:", RAW.length, "records");
 
-      // Populate dropdowns and snapshot AFTER RAW loads
       initDropdowns();
       setSnapshotDate();
   })
@@ -255,8 +254,7 @@ fetch("MasterLog.json")
       document.getElementById("snapshotTag").innerText = "Load error";
   });
 
-var activeType='ALL', activeStatus='ALL', activeLead='', activeArea='', activeApprover='';
-
+let activeType='ALL', activeStatus='ALL', activeLead='', activeArea='', activeApprover='';
 
 // ---------------- GATE ---------------- //
 function gateCheck(){
@@ -266,12 +264,12 @@ function gateCheck(){
 
   if(!e){
       err.textContent='Please enter your email.';
-      inp.classList.add('err'); 
+      inp.classList.add('err');
       return;
   }
   if(!e.endsWith('@hscni.net')){
       err.textContent='Access restricted to @hscni.net addresses only.';
-      inp.classList.add('err'); 
+      inp.classList.add('err');
       return;
   }
 
@@ -283,7 +281,6 @@ function gateCheck(){
   renderAll(filtered());
 }
 
-
 // ---------------- SNAPSHOT DATE ---------------- //
 function setSnapshotDate(){
     const today = new Date();
@@ -293,13 +290,11 @@ function setSnapshotDate(){
     document.getElementById('snapshotTag').textContent = `Data snapshot: ${d} ${m} ${y}`;
 }
 
-
 // ---------------- DROPDOWNS ---------------- //
 function initDropdowns(){
-
     const leads=[...new Set(
         RAW.map(r => (r.lead || "").trim().replace(/\u00A0/g, " "))
-   .filter(l => l && l !== "Transferred" && l !== "Orphan")
+            .filter(l => l && l !== "Transferred" && l !== "Orphan")
     )].sort();
 
     const areas=[...new Set(
@@ -309,7 +304,7 @@ function initDropdowns(){
     const ls=document.getElementById('leadFilter');
     leads.forEach(l=>{
         let o=document.createElement('option');
-        o.value=l; 
+        o.value=l;
         o.textContent=l;
         ls.appendChild(o);
     });
@@ -317,7 +312,7 @@ function initDropdowns(){
     const as=document.getElementById('areaFilter');
     areas.forEach(a=>{
         let o=document.createElement('option');
-        o.value=a; 
+        o.value=a;
         o.textContent=a;
         as.appendChild(o);
     });
@@ -339,12 +334,11 @@ function populateApproverFilter(){
     });
 }
 
-
 // ---------------- FILTER ENGINE ---------------- //
 function filtered(){
   return RAW.filter(r=>{
     if(activeType!=='ALL' && r.type!==activeType) return false;
-    if(activeStatus==='OPEN' && !r.isOpen) return false;
+    if(activeStatus==='OPEN' && (!r.isOpen || r.status==='Transferred')) return false;
     if(activeStatus==='OVERDUE' && !r.isOverdue) return false;
     if(activeStatus==='CLOSED' && !r.isClosed) return false;
     if(activeLead && r.lead.trim()!==activeLead) return false;
@@ -396,12 +390,11 @@ function clearFilters(){
       .forEach((e,i)=>e.classList.toggle('active',i===0));
 
     document.querySelectorAll('#statusFilters .ftag')
-      .forEach((e,i)=>{e.classList.toggle('active',i===0); 
+      .forEach((e,i)=>{e.classList.toggle('active',i===0);
                        e.classList.remove('active-red','active-amber');});
 
     renderAll(filtered());
 }
-
 
 // ---------------- MASTER RENDER CONTROLLER ---------------- //
 function renderAll(data){
@@ -417,11 +410,8 @@ function renderAll(data){
     renderAllList(data);
 }
 
-
 // ---------------- KPI RENDERING ---------------- //
 function renderKPIs(data){
-
-  // ✅ Transferred removed from all active KPIs
   const open = data.filter(r =>
       r.isOpen && r.status !== 'Transferred'
   ).length;
@@ -438,17 +428,13 @@ function renderKPIs(data){
       r.status === 'Transferred'
   ).length;
 
-  const pctOverdue = open > 0
-      ? Math.round((overdue / open) * 100)
-      : 0;
+  const pctOverdue = open > 0 ? Math.round((overdue / open) * 100) : 0;
 
   const closedOnTime = data.filter(r =>
       r.isClosed && r.onTime === true && r.status !== 'Transferred'
   ).length;
 
-  const pctOnTime = closed > 0
-      ? Math.round((closedOnTime / closed) * 100)
-      : 0;
+  const pctOnTime = closed > 0 ? Math.round((closedOnTime / closed) * 100) : 0;
 
   const turns = data
       .filter(r =>
@@ -473,12 +459,10 @@ function renderKPIs(data){
   document.getElementById('kTransferred').textContent = transferred;
 }
 
-
 // ---------------- OVERDUE CASES ---------------- //
 function renderOverdueList(data){
   const items = data.filter(r =>
-      r.isOverdue &&
-      r.status !== 'Transferred'
+      r.isOverdue && r.status !== 'Transferred'
   ).sort((a,b) => (a.daysUntilDue || 0) - (b.daysUntilDue || 0));
 
   document.getElementById('overdueCount').textContent = items.length;
@@ -486,7 +470,6 @@ function renderOverdueList(data){
       items.length ? items.map(caseItem).join('') :
       '<div class="no-results">No overdue cases 🎉</div>';
 }
-
 
 // ---------------- DUE SOON ---------------- //
 function renderDueSoonList(data){
@@ -505,8 +488,7 @@ function renderDueSoonList(data){
       '<div class="no-results">No cases due in 5 days.</div>';
 }
 
-
-// ---------------- ALL CASES (EXCLUDE TRANSFERRED) ---------------- //
+// ---------------- ALL CASES ---------------- //
 function renderAllList(data){
   const sorted = [...data]
       .filter(r => r.status !== 'Transferred')
@@ -517,12 +499,10 @@ function renderAllList(data){
       });
 
   document.getElementById('allCount').textContent = sorted.length;
-
   document.getElementById('allList').innerHTML =
       sorted.length ? sorted.map(caseItem).join('') :
       '<div class="no-results">No cases match filters.</div>';
 }
-
 
 // ---------------- LEAD WORKLOAD ---------------- //
 function renderLeadChart(data){
@@ -547,14 +527,15 @@ function renderLeadChart(data){
           const lead = e[0];
           const total = e[1];
           const overdue = open.filter(r => r.lead.trim() === lead && r.isOverdue).length;
+
           const cls = overdue > total * 0.7 ? 'red'
                     : overdue > total * 0.4 ? 'amber'
                     : 'teal';
-          return bar(lead, total, max, cls);
+
+          return bar(lead,total,max,cls);
       }).join('')
       : '<div class="no-results">No data.</div>';
 }
-
 
 // ---------------- APPROVER WORKLOAD ---------------- //
 function renderApproverChart(data){
@@ -579,79 +560,62 @@ function renderApproverChart(data){
           const approver = e[0];
           const total = e[1];
           const overdue = open.filter(r => r.approver.trim() === approver && r.isOverdue).length;
+
           const cls = overdue > total * 0.7 ? 'red'
                     : overdue > total * 0.4 ? 'amber'
                     : 'teal';
-          return bar(approver, total, max, cls);
+
+          return bar(approver,total,max,cls);
       }).join('')
       : '<div class="no-results">No data.</div>';
 }
-  
-// ---------------- URGENCY BOXES ---------------- //
-function renderUrgency(data){
 
-  // ✅ Only active, non-transferred open cases
+// ---------------- URGENCY ---------------- //
+function renderUrgency(data){
   const open = data.filter(r =>
       r.isOpen &&
-      r.status !== 'Transferred' &&   // <-- FIX
+      r.status !== 'Transferred' &&
       !r.isOverdue
   );
 
   document.getElementById('uDue1').textContent =
-      open.filter(r =>
-          r.daysUntilDue !== null &&
-          r.daysUntilDue <= 1 &&
-          r.daysUntilDue >= 0
-      ).length;
+      open.filter(r => r.daysUntilDue !== null && r.daysUntilDue <= 1 && r.daysUntilDue >= 0).length;
 
   document.getElementById('uDue3').textContent =
-      open.filter(r =>
-          r.daysUntilDue !== null &&
-          r.daysUntilDue <= 3 &&
-          r.daysUntilDue >= 0
-      ).length;
+      open.filter(r => r.daysUntilDue !== null && r.daysUntilDue <= 3 && r.daysUntilDue >= 0).length;
 
   document.getElementById('uDue5').textContent =
-      open.filter(r =>
-          r.daysUntilDue !== null &&
-          r.daysUntilDue <= 5 &&
-          r.daysUntilDue >= 0
-      ).length;
+      open.filter(r => r.daysUntilDue !== null && r.daysUntilDue <= 5 && r.daysUntilDue >= 0).length;
 
   document.getElementById('uDue10').textContent =
-      open.filter(r =>
-          r.daysUntilDue !== null &&
-          r.daysUntilDue <= 10 &&
-          r.daysUntilDue >= 0
-      ).length;
+      open.filter(r => r.daysUntilDue !== null && r.daysUntilDue <= 10 && r.daysUntilDue >= 0).length;
 }
 
-
-// ---------------- CASE TYPE GRID ---------------- //
+// ---------------- CASE TYPES ---------------- //
 function renderCaseTypes(data){
   ['AQW','AQO','COR','INV','TOF'].forEach(t=>{
-      const subset=data.filter(r=>r.type===t);
-      const open = subset.filter(r =>
-      r.isOpen &&
-      r.status !== 'Transferred' &&
-      r.status !== 'Completed' &&    // optional — if you ever use “Completed” text
-      !r.isClosed                     // safest method
-  ).length;
+      const subset = data.filter(r => r.type === t);
 
-      document.getElementById('ct-'+t).textContent=subset.length;
-      document.getElementById('ctsub-'+t).textContent=open+' open';
+      const open = subset.filter(r =>
+          r.isOpen &&
+          r.status !== 'Transferred' &&
+          !r.isClosed
+      ).length;
+
+      document.getElementById('ct-'+t).textContent = subset.length;
+      document.getElementById('ctsub-'+t).textContent = open + ' open';
   });
 
   document.getElementById('ctBadge').textContent =
       activeType==='ALL' ? 'All types' : activeType;
 }
 
-
 // ---------------- RING CHART ---------------- //
 function renderRing(data){
   const closed = data.filter(r=>r.isClosed);
   const onTime = closed.filter(r=>r.onTime===true).length;
   const late   = closed.filter(r=>r.onTime===false).length;
+
   const overdue= data.filter(r=>r.isOverdue).length;
   const openOk = data.filter(r=>r.isOpen && !r.isOverdue).length;
 
@@ -664,7 +628,7 @@ function renderRing(data){
   document.getElementById('rl-overdue').textContent  = `${overdue} open & overdue`;
   document.getElementById('rl-open').textContent     = `${openOk} open & on track`;
 
-  const canvas=document.getElementById('ringCanvas'); 
+  const canvas=document.getElementById('ringCanvas');
   if(!canvas) return;
 
   const ctx=canvas.getContext('2d');
@@ -681,7 +645,7 @@ function renderRing(data){
   if(!segments.length){
       ctx.beginPath();
       ctx.arc(cx,cy,r,0,2*Math.PI);
-      ctx.strokeStyle='#f1f5f9'; 
+      ctx.strokeStyle='#f1f5f9';
       ctx.lineWidth=lw;
       ctx.stroke();
       return;
@@ -703,7 +667,6 @@ function renderRing(data){
   });
 }
 
-
 // ---------------- BAR TEMPLATE ---------------- //
 function bar(label,count,max,cls){
     const pct=max>0 ? Math.round(count/max*100) : 0;
@@ -717,10 +680,9 @@ function bar(label,count,max,cls){
         </div>`;
 }
 
-
 // ---------------- AREA CHART ---------------- //
 function renderAreaChart(data){
-  const open=data.filter(r=>r.isOpen);
+  const open=data.filter(r=>r.isOpen && r.status!=='Transferred');
   const counts={};
 
   open.forEach(r=>{
@@ -740,94 +702,19 @@ function renderAreaChart(data){
       : '<div class="no-results">No open cases.</div>';
 }
 
-
-// ---------------- LEAD WORKLOAD ---------------- //
-function renderLeadChart(data){
-  const open=data.filter(r=>r.isOpen && r.lead!=='Transferred');
-  const counts={};
-
-  open.forEach(r=>{
-      const l=r.lead.trim();
-      counts[l]=(counts[l]||0)+1;
-  });
-
-  const sorted=Object.entries(counts)
-      .sort((a,b)=>b[1]-a[1])
-      .slice(0,12);
-
-  const max=sorted.length?sorted[0][1]:1;
-
-  document.getElementById('leadChart').innerHTML =
-      sorted.length
-      ? sorted.map(e=>{
-            const lead=e[0];
-            const total=e[1];
-            const overdue=open.filter(r=>r.lead.trim()===lead && r.isOverdue).length;
-
-            const cls = overdue>total*0.7 ? 'red'
-                      : overdue>total*0.4 ? 'amber'
-                      : 'teal';
-
-            return bar(lead,total,max,cls);
-        }).join('')
-      : '<div class="no-results">No data.</div>';
-}
-
-
-// ---------------- APPROVER WORKLOAD ---------------- //
-function renderApproverChart(data){
-  const open=data.filter(r=>r.isOpen && r.approver!=="Transferred");
-  const counts={};
-
-  open.forEach(r=>{
-      const a=r.approver.trim();
-      if(!a) return;
-      counts[a]=(counts[a]||0)+1;
-  });
-
-  const sorted=Object.entries(counts)
-      .sort((a,b)=>b[1]-a[1])
-      .slice(0,12);
-
-  const max=sorted.length?sorted[0][1]:1;
-
-  document.getElementById('approverChart').innerHTML =
-      sorted.length
-      ? sorted.map(e=>{
-            const approver=e[0];
-            const total=e[1];
-            const overdue=open.filter(r=>r.approver.trim()===approver && r.isOverdue).length;
-
-            const cls = overdue>total*0.7 ? 'red'
-                      : overdue>total*0.4 ? 'amber'
-                      : 'teal';
-
-            return bar(approver,total,max,cls);
-        }).join('')
-      : '<div class="no-results">No data.</div>';
-}
-
-
 // ---------------- CASE LISTS ---------------- //
 function statusPill(r){
-
-  // ✅ Transferred always gets its own badge
   if (r.status === 'Transferred') {
       return '<span class="status-pill pill-grey">Transferred</span>';
   }
-
   if (r.isOverdue)
       return '<span class="status-pill pill-red">Overdue</span>';
-
   if (r.isClosed && r.onTime === true)
       return '<span class="status-pill pill-green">On Time</span>';
-
   if (r.isClosed && r.onTime === false)
       return '<span class="status-pill pill-amber">Late</span>';
-
   if (r.isClosed)
       return '<span class="status-pill pill-blue">Closed</span>';
-
   if (r.isOpen)
       return '<span class="status-pill pill-blue">In Progress</span>';
 
@@ -837,7 +724,7 @@ function statusPill(r){
 function daysTag(r){
   if(!r.isOpen) return '';
   if(r.isOverdue) return `<div class="case-days overdue-days">${Math.abs(r.daysUntilDue||0)}d overdue</div>`;
-  if(r.daysUntilDue!==null && r.daysUntilDue<=5) 
+  if(r.daysUntilDue!==null && r.daysUntilDue<=5)
       return `<div class="case-days due-days">Due in ${r.daysUntilDue}d</div>`;
   return '';
 }
@@ -853,6 +740,8 @@ function caseItem(r){
         <div class="case-status">${statusPill(r)}${daysTag(r)}</div>
     </div>`;
 }
+
 </script>
+
 </body>
 </html>
