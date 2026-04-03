@@ -631,7 +631,12 @@ function renderUrgency(data){
 function renderCaseTypes(data){
   ['AQW','AQO','COR','INV','TOF'].forEach(t=>{
       const subset=data.filter(r=>r.type===t);
-      const open=subset.filter(r=>r.isOpen).length;
+      const open = subset.filter(r =>
+      r.isOpen &&
+      r.status !== 'Transferred' &&
+      r.status !== 'Completed' &&    // optional — if you ever use “Completed” text
+      !r.isClosed                     // safest method
+  ).length;
 
       document.getElementById('ct-'+t).textContent=subset.length;
       document.getElementById('ctsub-'+t).textContent=open+' open';
@@ -805,11 +810,27 @@ function renderApproverChart(data){
 
 // ---------------- CASE LISTS ---------------- //
 function statusPill(r){
-  if(r.isOverdue) return '<span class="status-pill pill-red">Overdue</span>';
-  if(r.isClosed && r.onTime===true)  return '<span class="status-pill pill-green">On Time</span>';
-  if(r.isClosed && r.onTime===false) return '<span class="status-pill pill-amber">Late</span>';
-  if(r.isClosed) return '<span class="status-pill pill-blue">Closed</span>';
-  if(r.isOpen)   return '<span class="status-pill pill-blue">In Progress</span>';
+
+  // ✅ Transferred always gets its own badge
+  if (r.status === 'Transferred') {
+      return '<span class="status-pill pill-grey">Transferred</span>';
+  }
+
+  if (r.isOverdue)
+      return '<span class="status-pill pill-red">Overdue</span>';
+
+  if (r.isClosed && r.onTime === true)
+      return '<span class="status-pill pill-green">On Time</span>';
+
+  if (r.isClosed && r.onTime === false)
+      return '<span class="status-pill pill-amber">Late</span>';
+
+  if (r.isClosed)
+      return '<span class="status-pill pill-blue">Closed</span>';
+
+  if (r.isOpen)
+      return '<span class="status-pill pill-blue">In Progress</span>';
+
   return `<span class="status-pill pill-amber">${r.status}</span>`;
 }
 
@@ -832,34 +853,6 @@ function caseItem(r){
         <div class="case-status">${statusPill(r)}${daysTag(r)}</div>
     </div>`;
 }
-
-function renderOverdueList(data){
-  const items=data.filter(r=>r.isOverdue)
-                  .sort((a,b)=>(a.daysUntilDue||0)-(b.daysUntilDue||0));
-
-  document.getElementById('overdueCount').textContent=items.length;
-  document.getElementById('overdueList').innerHTML =
-      items.length ? items.map(caseItem).join('')
-                   : '<div class="no-results">No overdue cases 🎉</div>';
-}
-
-function renderDueSoonList(data){
-  const items=data.filter(r=>r.isOpen && !r.isOverdue && r.daysUntilDue!==null && r.daysUntilDue<=5)
-                  .sort((a,b)=>a.daysUntilDue-b.daysUntilDue);
-
-  document.getElementById('dueSoonCount').textContent=items.length;
-  document.getElementById('dueSoonList').innerHTML =
-      items.length ? items.map(caseItem).join('')
-                   : '<div class="no-results">No cases due in 5 days.</div>';
-}
-
-function renderAllList(data){
-  const sorted=[...data].sort((a,b)=>{
-      if(a.isOverdue && !b.isOverdue) return -1;
-      if(!a.isOverdue && b.isOverdue) return 1;
-      return (a.daysUntilDue||999)-(b.daysUntilDue||999);
-  });
-
   document.getElementById('allCount').textContent=sorted.length;
   document.getElementById('allList').innerHTML =
       sorted.length ? sorted.map(caseItem).join('')
