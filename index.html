@@ -853,12 +853,6 @@ function caseItem(r){
         <div class="case-status">${statusPill(r)}${daysTag(r)}</div>
     </div>`;
 }
-  document.getElementById('allCount').textContent=sorted.length;
-  document.getElementById('allList').innerHTML =
-      sorted.length ? sorted.map(caseItem).join('')
-                    : '<div class="no-results">No cases match filters.</div>';
-}
-
 </script>
 </body>
 </html>
