@@ -612,58 +612,73 @@ function renderCaseTypes(data){
 
 // ---------------- RING CHART ---------------- //
 function renderRing(data){
-  const closed = data.filter(r=>r.isClosed);
-  const onTime = closed.filter(r=>r.onTime===true).length;
-  const late   = closed.filter(r=>r.onTime===false).length;
+  const closed = data.filter(r => r.isClosed);
+  const onTime = closed.filter(r => r.onTime === true).length;
+  const late   = closed.filter(r => r.onTime === false).length;
 
-  const overdue= data.filter(r=>r.isOverdue).length;
-  const openOk = data.filter(r=>r.isOpen && !r.isOverdue).length;
+  const overdue = data.filter(r => 
+      r.isOverdue && r.status !== 'Transferred'
+  ).length;
 
-  const total = onTime+late+overdue+openOk || 1;
-  const pct   = closed.length>0 ? Math.round(onTime/closed.length*100):0;
+  const openOk = data.filter(r => 
+      r.isOpen && 
+      !r.isOverdue && 
+      r.status !== 'Transferred' &&
+      r.status !== 'Awaiting Transfer'
+  ).length;
 
-  document.getElementById('ringPct').textContent=pct+'%';
-  document.getElementById('rl-ontime').textContent   = `${onTime} completed on time`;
-  document.getElementById('rl-late').textContent     = `${late} completed late`;
-  document.getElementById('rl-overdue').textContent  = `${overdue} open & overdue`;
-  document.getElementById('rl-open').textContent     = `${openOk} open & on track`;
+  const total = onTime + late + overdue + openOk || 1;
+  const pct = closed.length > 0 ? Math.round(onTime / closed.length * 100) : 0;
 
-  const canvas=document.getElementById('ringCanvas');
+  document.getElementById('ringPct').textContent = pct + '%';
+  document.getElementById('rl-ontime').textContent  = `${onTime} completed on time`;
+  document.getElementById('rl-late').textContent    = `${late} completed late`;
+  document.getElementById('rl-overdue').textContent = `${overdue} open & overdue`;
+  document.getElementById('rl-open').textContent    = `${openOk} open & on track`;
+
+  const canvas = document.getElementById('ringCanvas');
   if(!canvas) return;
 
-  const ctx=canvas.getContext('2d');
-  const cx=65, cy=65, r=48, lw=14;
-  ctx.clearRect(0,0,130,130);
+  const ctx = canvas.getContext('2d');
+  const cx = 65, cy = 65, r = 48, lw = 14;
+  ctx.clearRect(0, 0, 130, 130);
 
-  const segments=[
-      {val:onTime,color:'#16a34a'},
-      {val:late,color:'#d97706'},
-      {val:overdue,color:'#dc2626'},
-      {val:openOk,color:'#0d9488'}
-  ].filter(s=>s.val>0);
+  const COLOURS = {
+    onTime:  '#16a34a',
+    late:    '#d97706',
+    overdue: '#dc2626',
+    openOk:  '#0d9488'
+  };
+
+  const segments = [
+    { val: onTime,  color: COLOURS.onTime  },
+    { val: late,    color: COLOURS.late    },
+    { val: overdue, color: COLOURS.overdue },
+    { val: openOk,  color: COLOURS.openOk  }
+  ].filter(s => s.val > 0);
 
   if(!segments.length){
-      ctx.beginPath();
-      ctx.arc(cx,cy,r,0,2*Math.PI);
-      ctx.strokeStyle='#f1f5f9';
-      ctx.lineWidth=lw;
-      ctx.stroke();
-      return;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, 2 * Math.PI);
+    ctx.strokeStyle = '#f1f5f9';
+    ctx.lineWidth = lw;
+    ctx.stroke();
+    return;
   }
 
-  let start=-Math.PI/2;
-  const gap=0.03;
-  const totalGap=gap*segments.length;
+  let start = -Math.PI / 2;
+  const gap = 0.03;
+  const totalGap = gap * segments.length;
 
-  segments.forEach(s=>{
-      const sweep=(s.val/total)*(2*Math.PI-totalGap);
-      ctx.beginPath();
-      ctx.arc(cx,cy,r,start,start+sweep);
-      ctx.strokeStyle=s.color;
-      ctx.lineWidth=lw;
-      ctx.lineCap='round';
-      ctx.stroke();
-      start+=sweep+gap;
+  segments.forEach(s => {
+    const sweep = (s.val / total) * (2 * Math.PI - totalGap);
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, start, start + sweep);
+    ctx.strokeStyle = s.color;
+    ctx.lineWidth = lw;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+    start += sweep + gap;
   });
 }
 
