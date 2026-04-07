@@ -286,13 +286,9 @@ function gateCheck(){
 // ── SNAPSHOT DATE ─────────────────────────────────────────────────────────────
 function setSnapshotDate(){
   var months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  var dates = RAW.filter(function(r){ return r.received; })
-                 .map(function(r){ return new Date(r.received); })
-                 .filter(function(d){ return !isNaN(d); });
-  if(!dates.length) return;
-  var latest = new Date(Math.max.apply(null, dates));
+  var now = new Date();
   document.getElementById('snapshotTag').textContent =
-    'Data snapshot: ' + latest.getDate() + ' ' + months[latest.getMonth()] + ' ' + latest.getFullYear();
+    'Last updated: ' + now.getDate() + ' ' + months[now.getMonth()] + ' ' + now.getFullYear();
 }
 
 // ── DROPDOWNS ─────────────────────────────────────────────────────────────────
