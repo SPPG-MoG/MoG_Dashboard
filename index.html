@@ -240,36 +240,60 @@ select.fsel:focus{border-color:var(--teal);}
   <div class="panel" style="margin-bottom:20px;"><div class="panel-title">Due in Next 5 Days <span class="panel-badge" id="dueSoonCount">0</span></div><div class="scroll-panel" id="dueSoonList"></div></div>
   <div class="panel"><div class="panel-title">All Filtered Cases <span class="panel-badge" id="allCount">0</span></div><div class="scroll-panel" style="max-height:420px;" id="allList"></div></div>
 </div>
+
 <script>
+/* ======================================================================
+   DATA LOAD
+====================================================================== */
 let RAW = [];
 
-/* ---------------- LOAD JSON ---------------- */
 fetch("MasterLog.json")
   .then(r => r.json())
   .then(data => {
     RAW = data;
     initDropdowns();
     setSnapshotDate();
+  })
+  .catch(err => {
+    console.error(err);
+    document.getElementById("snapshotTag").textContent = "Load error";
   });
 
-/* ---------------- STATE ---------------- */
+/* ======================================================================
+   GLOBAL STATE
+====================================================================== */
 let activeType='ALL', activeStatus='ALL',
     activeLead='', activeArea='', activeApprover='';
 
-/* ---------------- HELPERS ---------------- */
+/* ======================================================================
+   CORE HELPERS
+====================================================================== */
+
+// Performance dataset = everything except Transferred
 function performanceBase(data){
   return data.filter(r => r.status !== 'Transferred');
 }
 
-/* ---------------- GATE ---------------- */
+// On‑time calculation (SOURCE OF TRUTH)
+function isOnTime(r){
+  if (!r.isClosed || !r.closed || !r.due) return false;
+  return new Date(r.closed) <= new Date(r.due);
+}
+
+/* ======================================================================
+   GATE
+====================================================================== */
 function gateCheck(){
-  const e = document.getElementById('gEmail').value.trim().toLowerCase();
-  if(!e.endsWith('@hscni.net')) return;
+  const email = document.getElementById('gEmail').value.trim().toLowerCase();
+  if(!email.endsWith('@hscni.net')) return;
+
   document.getElementById('gate').classList.add('gone');
   renderAll(filtered());
 }
 
-/* ---------------- SNAPSHOT ---------------- */
+/* ======================================================================
+   SNAPSHOT
+====================================================================== */
 function setSnapshotDate(){
   const d = new Date();
   document.getElementById('snapshotTag').textContent =
@@ -278,21 +302,68 @@ function setSnapshotDate(){
     } ${d.getFullYear()}`;
 }
 
-/* ---------------- FILTERING ---------------- */
+/* ======================================================================
+   DROPDOWNS
+====================================================================== */
+function initDropdowns(){
+  const leads=[...new Set(
+    RAW.map(r=>(r.lead||'').trim())
+       .filter(l => l && l!=='Transferred' && l!=='Orphan')
+  )].sort();
+
+  const areas=[...new Set(
+    RAW.map(r=>r.area || '').filter(Boolean)
+  )].sort();
+
+  const leadSel=document.getElementById('leadFilter');
+  leads.forEach(l=>{
+    const o=document.createElement('option');
+    o.value=o.textContent=l;
+    leadSel.appendChild(o);
+  });
+
+  const areaSel=document.getElementById('areaFilter');
+  areas.forEach(a=>{
+    const o=document.createElement('option');
+    o.value=o.textContent=a;
+    areaSel.appendChild(o);
+  });
+
+  populateApproverFilter();
+}
+
+function populateApproverFilter(){
+  const sel=document.getElementById('approverFilter');
+  const approvers=[...new Set(
+    RAW.map(r=>(r.approver||'').trim()).filter(Boolean)
+  )].sort();
+
+  approvers.forEach(a=>{
+    const o=document.createElement('option');
+    o.value=o.textContent=a;
+    sel.appendChild(o);
+  });
+}
+
+/* ======================================================================
+   FILTER ENGINE
+====================================================================== */
 function filtered(){
   return RAW.filter(r=>{
     if(activeType!=='ALL' && r.type!==activeType) return false;
     if(activeStatus==='OPEN' && (!r.isOpen || r.status==='Transferred')) return false;
     if(activeStatus==='OVERDUE' && !r.isOverdue) return false;
     if(activeStatus==='CLOSED' && !r.isClosed) return false;
-    if(activeLead && r.lead.trim()!==activeLead) return false;
-    if(activeArea && r.area.trim()!==activeArea) return false;
-    if(activeApprover && r.approver.trim()!==activeApprover) return false;
+    if(activeLead && r.lead!==activeLead) return false;
+    if(activeArea && r.area!==activeArea) return false;
+    if(activeApprover && r.approver!==activeApprover) return false;
     return true;
   });
 }
 
-/* ---------------- MASTER RENDER ---------------- */
+/* ======================================================================
+   MASTER RENDER PIPELINE
+====================================================================== */
 function renderAll(data){
   const base = performanceBase(data);
 
@@ -310,71 +381,90 @@ function renderAll(data){
   renderAllList(base);
 }
 
-/* ---------------- KPIs ---------------- */
+/* ======================================================================
+   KPIs (FULL DATASET)
+====================================================================== */
 function renderKPIs(data){
   const open = data.filter(r=>r.isOpen && r.status!=='Transferred').length;
   const overdue = data.filter(r=>r.isOverdue && r.status!=='Transferred').length;
   const closed = data.filter(r=>r.isClosed && r.status!=='Transferred').length;
 
-  document.getElementById('kOpenCases').textContent = open;
-  document.getElementById('kOverdue').textContent   = overdue;
-  document.getElementById('kClosed').textContent    = closed;
+  document.getElementById('kOpenCases').textContent=open;
+  document.getElementById('kOverdue').textContent=overdue;
+  document.getElementById('kClosed').textContent=closed;
+
+  const closedOnTime = data
+    .filter(r=>r.isClosed && r.status!=='Transferred' && isOnTime(r)).length;
+
+  document.getElementById('kPctOverdue').textContent =
+    open ? Math.round(overdue/open*100)+'%' : '0%';
+
+  document.getElementById('kOnTime').textContent =
+    closed ? Math.round(closedOnTime/closed*100)+'%' : '0%';
 }
 
-/* ---------------- TRANSFERRED TILE ---------------- */
+/* ======================================================================
+   TRANSFERRED TILE
+====================================================================== */
 function renderTransferredTile(data){
   document.getElementById('kTransferredOnly').textContent =
     data.filter(r=>r.status==='Transferred').length;
 }
 
-/* ---------------- URGENCY (BASE) ---------------- */
+/* ======================================================================
+   URGENCY (BASE)
+====================================================================== */
 function renderUrgency(base){
   const open = base.filter(r=>r.isOpen && !r.isOverdue);
-
   ['1','3','5','10'].forEach(d=>{
     document.getElementById('uDue'+d).textContent =
       open.filter(r=>r.daysUntilDue!==null &&
-                      r.daysUntilDue<=+d &&
-                      r.daysUntilDue>=0).length;
+                     r.daysUntilDue<=+d &&
+                     r.daysUntilDue>=0).length;
   });
 }
 
-/* ---------------- CASE TYPES (BASE) ---------------- */
+/* ======================================================================
+   CASE TYPES (BASE)
+====================================================================== */
 function renderCaseTypes(base){
   ['AQW','AQO','COR','INV','TOF'].forEach(t=>{
     const subset = base.filter(r=>r.type===t);
-    const open = subset.filter(r=>r.isOpen).length;
-
     document.getElementById('ct-'+t).textContent = subset.length;
-    document.getElementById('ctsub-'+t).textContent = open+' open';
+    document.getElementById('ctsub-'+t).textContent =
+      subset.filter(r=>r.isOpen).length + ' open';
   });
 }
 
-/* ---------------- RING (BASE) ---------------- */
+/* ======================================================================
+   PERFORMANCE RING (BASE)
+====================================================================== */
 function renderRing(base){
   const closed = base.filter(r=>r.isClosed);
-  const onTime = closed.filter(r=>r.onTime).length;
-  const late   = closed.filter(r=>!r.onTime).length;
+  const onTime = closed.filter(r=>isOnTime(r)).length;
+  const late   = closed.filter(r=>!isOnTime(r)).length;
+
   const overdue = base.filter(r=>r.isOpen && r.isOverdue).length;
-  const openOk = base.filter(r=>r.isOpen && !r.isOverdue).length;
+  const openOk  = base.filter(r=>r.isOpen && !r.isOverdue).length;
 
   document.getElementById('rl-ontime').textContent  = `${onTime} completed on time`;
   document.getElementById('rl-late').textContent    = `${late} completed late`;
   document.getElementById('rl-overdue').textContent = `${overdue} open & overdue`;
   document.getElementById('rl-open').textContent    = `${openOk} open & on track`;
 
-  const pct = closed.length ? Math.round(onTime/closed.length*100) : 0;
-  document.getElementById('ringPct').textContent = pct+'%';
+  document.getElementById('ringPct').textContent =
+    closed.length ? Math.round(onTime/closed.length*100)+'%' : '0%';
 }
 
-/* ---------------- STUBS (BASE) ---------------- */
+/* ======================================================================
+   PLACEHOLDERS (UNCHANGED FROM YOUR VERSION)
+====================================================================== */
 function renderAreaChart(){ }
 function renderLeadChart(){ }
 function renderApproverChart(){ }
 function renderOverdueList(){ }
 function renderDueSoonList(){ }
 function renderAllList(){ }
-
 </script>
 </body>
 </html>
