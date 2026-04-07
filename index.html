@@ -612,29 +612,27 @@ function renderCaseTypes(data){
 
 // ---------------- RING CHART ---------------- //
 function renderRing(data){
-  const closed = data.filter(r => r.isClosed);
-  const onTime = closed.filter(r => r.onTime === true).length;
-  const late   = closed.filter(r => r.onTime === false).length;
 
-  const overdue = data.filter(r => 
-      r.isOverdue && r.status !== 'Transferred'
-  ).length;
+  // ✅ Exclude transferred entirely
+  const active = data.filter(r => r.status !== 'Transferred');
 
-  const openOk = data.filter(r => 
-      r.isOpen && 
-      !r.isOverdue && 
-      r.status !== 'Transferred' &&
-      r.status !== 'Awaiting Transfer'
-  ).length;
+  const closed      = active.filter(r => r.isClosed);
+  const onTime      = closed.filter(r => r.onTime === true).length;
+  const late        = closed.filter(r => r.onTime === false).length;
 
-  const total = onTime + late + overdue + openOk || 1;
-  const pct = closed.length > 0 ? Math.round(onTime / closed.length * 100) : 0;
+  const overdue     = active.filter(r => r.isOpen && r.isOverdue).length;
+  const openOnTrack = active.filter(r => r.isOpen && !r.isOverdue).length;
+
+  const total = onTime + late + overdue + openOnTrack || 1;
+  const pct   = closed.length > 0
+      ? Math.round(onTime / closed.length * 100)
+      : 0;
 
   document.getElementById('ringPct').textContent = pct + '%';
-  document.getElementById('rl-ontime').textContent  = `${onTime} completed on time`;
-  document.getElementById('rl-late').textContent    = `${late} completed late`;
-  document.getElementById('rl-overdue').textContent = `${overdue} open & overdue`;
-  document.getElementById('rl-open').textContent    = `${openOk} open & on track`;
+  document.getElementById('rl-ontime').textContent   = `${onTime} completed on time`;
+  document.getElementById('rl-late').textContent     = `${late} completed late`;
+  document.getElementById('rl-overdue').textContent  = `${overdue} open & overdue`;
+  document.getElementById('rl-open').textContent     = `${openOnTrack} open & on track`;
 
   const canvas = document.getElementById('ringCanvas');
   if(!canvas) return;
@@ -643,18 +641,11 @@ function renderRing(data){
   const cx = 65, cy = 65, r = 48, lw = 14;
   ctx.clearRect(0, 0, 130, 130);
 
-  const COLOURS = {
-    onTime:  '#16a34a',
-    late:    '#d97706',
-    overdue: '#dc2626',
-    openOk:  '#0d9488'
-  };
-
   const segments = [
-    { val: onTime,  color: COLOURS.onTime  },
-    { val: late,    color: COLOURS.late    },
-    { val: overdue, color: COLOURS.overdue },
-    { val: openOk,  color: COLOURS.openOk  }
+      { val: onTime,      color: '#16a34a' },
+      { val: late,        color: '#d97706' },
+      { val: overdue,     color: '#dc2626' },
+      { val: openOnTrack, color: '#0d9488' }
   ].filter(s => s.val > 0);
 
   if(!segments.length){
@@ -681,7 +672,6 @@ function renderRing(data){
     start += sweep + gap;
   });
 }
-
 // ---------------- BAR TEMPLATE ---------------- //
 function bar(label,count,max,cls){
     const pct=max>0 ? Math.round(count/max*100) : 0;
