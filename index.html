@@ -240,50 +240,36 @@ select.fsel:focus{border-color:var(--teal);}
   <div class="panel" style="margin-bottom:20px;"><div class="panel-title">Due in Next 5 Days <span class="panel-badge" id="dueSoonCount">0</span></div><div class="scroll-panel" id="dueSoonList"></div></div>
   <div class="panel"><div class="panel-title">All Filtered Cases <span class="panel-badge" id="allCount">0</span></div><div class="scroll-panel" style="max-height:420px;" id="allList"></div></div>
 </div>
-  <script>
+<script>
 let RAW = [];
 
-// ---------------- LOAD JSON ---------------- //
+/* ---------------- LOAD JSON ---------------- */
 fetch("MasterLog.json")
   .then(r => r.json())
   .then(data => {
-      RAW = data;
-      console.log("MasterLog loaded:", RAW.length, "records");
-      initDropdowns();
-      setSnapshotDate();
-  })
-  .catch(err => {
-      console.error("Error loading MasterLog.json:", err);
-      document.getElementById("snapshotTag").innerText = "Load error";
+    RAW = data;
+    initDropdowns();
+    setSnapshotDate();
   });
 
-let activeType='ALL', activeStatus='ALL', activeLead='', activeArea='', activeApprover='';
+/* ---------------- STATE ---------------- */
+let activeType='ALL', activeStatus='ALL',
+    activeLead='', activeArea='', activeApprover='';
 
-// ---------------- GATE ---------------- //
+/* ---------------- HELPERS ---------------- */
+function performanceBase(data){
+  return data.filter(r => r.status !== 'Transferred');
+}
+
+/* ---------------- GATE ---------------- */
 function gateCheck(){
   const e = document.getElementById('gEmail').value.trim().toLowerCase();
-  const err = document.getElementById('gErr');
-  const inp = document.getElementById('gEmail');
-
-  if(!e){
-      err.textContent='Please enter your email.';
-      inp.classList.add('err');
-      return;
-  }
-  if(!e.endsWith('@hscni.net')){
-      err.textContent='Access restricted to @hscni.net addresses only.';
-      inp.classList.add('err');
-      return;
-  }
-
-  err.textContent='';
-  inp.classList.remove('err');
+  if(!e.endsWith('@hscni.net')) return;
   document.getElementById('gate').classList.add('gone');
-
   renderAll(filtered());
 }
 
-// ---------------- SNAPSHOT DATE ---------------- //
+/* ---------------- SNAPSHOT ---------------- */
 function setSnapshotDate(){
   const d = new Date();
   document.getElementById('snapshotTag').textContent =
@@ -292,37 +278,7 @@ function setSnapshotDate(){
     } ${d.getFullYear()}`;
 }
 
-// ---------------- DROPDOWNS ---------------- //
-function initDropdowns(){
-  const leads=[...new Set(
-    RAW.map(r=>(r.lead||"").trim()).filter(l=>l && l!=="Transferred" && l!=="Orphan")
-  )].sort();
-
-  const areas=[...new Set(
-    RAW.map(r=>r.area.trim()).filter(Boolean)
-  )].sort();
-
-  const ls=document.getElementById('leadFilter');
-  leads.forEach(l=>{
-    let o=document.createElement('option');
-    o.value=o.textContent=l;
-    ls.appendChild(o);
-  });
-
-  populateApproverFilter();
-}
-
-function populateApproverFilter(){
-  const sel=document.getElementById('approverFilter');
-  const approvers=[...new Set(RAW.map(r=>(r.approver||'').trim()).filter(Boolean))].sort();
-  approvers.forEach(a=>{
-    let o=document.createElement('option');
-    o.value=o.textContent=a;
-    sel.appendChild(o);
-  });
-}
-
-// ---------------- FILTERS ---------------- //
+/* ---------------- FILTERING ---------------- */
 function filtered(){
   return RAW.filter(r=>{
     if(activeType!=='ALL' && r.type!==activeType) return false;
@@ -336,100 +292,89 @@ function filtered(){
   });
 }
 
+/* ---------------- MASTER RENDER ---------------- */
 function renderAll(data){
+  const base = performanceBase(data);
+
   renderKPIs(data);
-  renderUrgency(data);
-  renderCaseTypes(data);
-  renderRing(data);
-  renderAreaChart(data);
-  renderLeadChart(data);
-  renderApproverChart(data);
-  renderOverdueList(data);
-  renderDueSoonList(data);
-  renderAllList(data);
+  renderTransferredTile(data);
+
+  renderUrgency(base);
+  renderCaseTypes(base);
+  renderRing(base);
+  renderAreaChart(base);
+  renderLeadChart(base);
+  renderApproverChart(base);
+  renderOverdueList(base);
+  renderDueSoonList(base);
+  renderAllList(base);
 }
 
-// ---------------- KPIs ---------------- //
+/* ---------------- KPIs ---------------- */
 function renderKPIs(data){
   const open = data.filter(r=>r.isOpen && r.status!=='Transferred').length;
   const overdue = data.filter(r=>r.isOverdue && r.status!=='Transferred').length;
   const closed = data.filter(r=>r.isClosed && r.status!=='Transferred').length;
-  const transferred = data.filter(r=>r.status==='Transferred').length;
 
-  document.getElementById('kOpenCases').textContent=open;
-  document.getElementById('kOverdue').textContent=overdue;
-  document.getElementById('kClosed').textContent=closed;
-  document.getElementById('kTransferred').textContent=transferred;
-
-  document.getElementById('kPctOverdue').textContent =
-    open>0 ? Math.round(overdue/open*100)+'%' : '0%';
-
-  const closedOnTime=data.filter(r=>r.isClosed && r.onTime===true && r.status!=='Transferred').length;
-  document.getElementById('kOnTime').textContent =
-    closed>0 ? Math.round(closedOnTime/closed*100)+'%' : '0%';
+  document.getElementById('kOpenCases').textContent = open;
+  document.getElementById('kOverdue').textContent   = overdue;
+  document.getElementById('kClosed').textContent    = closed;
 }
 
-// ---------------- RING (PERFORMANCE ONLY) ---------------- //
-function renderRing(data){
-
-  // ✅ ONLY non-transferred cases contribute
-  const base = data.filter(r => r.status !== 'Transferred');
-
-  const closed = base.filter(r=>r.isClosed);
-  const onTime = closed.filter(r=>r.onTime===true).length;
-  const late   = closed.filter(r=>r.onTime===false).length;
-  const overdue= base.filter(r=>r.isOpen && r.isOverdue).length;
-  const openOk = base.filter(r=>r.isOpen && !r.isOverdue).length;
-
-  document.getElementById('rl-ontime').textContent   = `${onTime} completed on time`;
-  document.getElementById('rl-late').textContent     = `${late} completed late`;
-  document.getElementById('rl-overdue').textContent  = `${overdue} open & overdue`;
-  document.getElementById('rl-open').textContent     = `${openOk} open & on track`;
-
-  const pct = closed.length>0 ? Math.round(onTime/closed.length*100):0;
-  document.getElementById('ringPct').textContent=pct+'%';
-
-  const canvas=document.getElementById('ringCanvas');
-  if(!canvas) return;
-  const ctx=canvas.getContext('2d');
-  ctx.clearRect(0,0,130,130);
-
-  const segments=[
-    {v:onTime,c:'#16a34a'},
-    {v:late,c:'#d97706'},
-    {v:overdue,c:'#dc2626'},
-    {v:openOk,c:'#0d9488'}
-  ].filter(s=>s.v>0);
-
-  if(!segments.length) return;
-
-  let start=-Math.PI/2;
-  const total=segments.reduce((a,b)=>a+b.v,0);
-  segments.forEach(s=>{
-    const sweep=(s.v/total)*Math.PI*2;
-    ctx.beginPath();
-    ctx.arc(65,65,48,start,start+sweep);
-    ctx.strokeStyle=s.c;
-    ctx.lineWidth=14;
-    ctx.stroke();
-    start+=sweep;
-  });
-}
-
-// ---------------- TRANSFERRED TILE ---------------- //
+/* ---------------- TRANSFERRED TILE ---------------- */
 function renderTransferredTile(data){
   document.getElementById('kTransferredOnly').textContent =
     data.filter(r=>r.status==='Transferred').length;
 }
 
-// ---------------- URGENCY ---------------- //
-function renderUrgency(data){
-  const open=data.filter(r=>r.isOpen && r.status!=='Transferred' && !r.isOverdue);
+/* ---------------- URGENCY (BASE) ---------------- */
+function renderUrgency(base){
+  const open = base.filter(r=>r.isOpen && !r.isOverdue);
+
   ['1','3','5','10'].forEach(d=>{
     document.getElementById('uDue'+d).textContent =
-      open.filter(r=>r.daysUntilDue!==null && r.daysUntilDue<=+d && r.daysUntilDue>=0).length;
+      open.filter(r=>r.daysUntilDue!==null &&
+                      r.daysUntilDue<=+d &&
+                      r.daysUntilDue>=0).length;
   });
 }
+
+/* ---------------- CASE TYPES (BASE) ---------------- */
+function renderCaseTypes(base){
+  ['AQW','AQO','COR','INV','TOF'].forEach(t=>{
+    const subset = base.filter(r=>r.type===t);
+    const open = subset.filter(r=>r.isOpen).length;
+
+    document.getElementById('ct-'+t).textContent = subset.length;
+    document.getElementById('ctsub-'+t).textContent = open+' open';
+  });
+}
+
+/* ---------------- RING (BASE) ---------------- */
+function renderRing(base){
+  const closed = base.filter(r=>r.isClosed);
+  const onTime = closed.filter(r=>r.onTime).length;
+  const late   = closed.filter(r=>!r.onTime).length;
+  const overdue = base.filter(r=>r.isOpen && r.isOverdue).length;
+  const openOk = base.filter(r=>r.isOpen && !r.isOverdue).length;
+
+  document.getElementById('rl-ontime').textContent  = `${onTime} completed on time`;
+  document.getElementById('rl-late').textContent    = `${late} completed late`;
+  document.getElementById('rl-overdue').textContent = `${overdue} open & overdue`;
+  document.getElementById('rl-open').textContent    = `${openOk} open & on track`;
+
+  const pct = closed.length ? Math.round(onTime/closed.length*100) : 0;
+  document.getElementById('ringPct').textContent = pct+'%';
+}
+
+/* ---------------- STUBS (BASE) ---------------- */
+function renderAreaChart(){ }
+function renderLeadChart(){ }
+function renderApproverChart(){ }
+function renderOverdueList(){ }
+function renderDueSoonList(){ }
+function renderAllList(){ }
+
 </script>
 </body>
 </html>
