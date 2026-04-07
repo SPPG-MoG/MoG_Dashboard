@@ -1,744 +1,356 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MoG Case Management Dashboard — SPPG Hospital Care</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+
 <style>
-:root{--ink:#0a0e1a;--ink2:#1c2235;--ink3:#2e3650;--teal:#0d9488;--teal-l:#14b8a6;--teal-pale:#f0fdfa;--red:#dc2626;--red-pale:#fef2f2;--amber:#d97706;--amber-pale:#fffbeb;--green:#16a34a;--green-pale:#f0fdf4;--blue:#2563eb;--blue-pale:#eff6ff;--slate:#64748b;--border:#e2e8f0;--bg:#f8fafc;--card:#ffffff;--shadow:0 1px 3px rgba(0,0,0,.08),0 4px 16px rgba(0,0,0,.04);--shadow-lg:0 4px 24px rgba(0,0,0,.12);}
-*{margin:0;padding:0;box-sizing:border-box;}
-html{scroll-behavior:smooth;}
-body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;}
-#gate{position:fixed;inset:0;background:var(--ink);z-index:9999;display:flex;align-items:flex-start;justify-content:center;padding:40px 20px;overflow-y:auto;}
-#gate.gone{display:none;}
-.gate-wrap{background:var(--ink2);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:36px 28px;max-width:440px;width:100%;text-align:center;margin:auto;}
-.gate-logo{font-family:'DM Mono',monospace;font-size:.75rem;letter-spacing:.12em;text-transform:uppercase;color:var(--teal-l);margin-bottom:16px;}
-.gate-title{font-family:'DM Serif Display',serif;font-size:1.6rem;color:#fff;margin-bottom:6px;line-height:1.2;}
-.gate-title em{color:var(--teal-l);font-style:normal;}
-.gate-sub{font-size:.84rem;color:rgba(255,255,255,.45);margin-bottom:18px;line-height:1.5;}
-.gate-input{width:100%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:13px 16px;font-family:'DM Sans',sans-serif;font-size:.93rem;color:#fff;outline:none;transition:border-color .2s;margin-bottom:10px;}
-.gate-input:focus{border-color:var(--teal-l);}
-.gate-input.err{border-color:var(--red);}
-.gate-error{font-size:.8rem;color:#f87171;min-height:16px;margin-bottom:12px;text-align:left;}
-.gate-btn{width:100%;background:var(--teal);color:#fff;border:none;border-radius:8px;padding:13px;font-family:'DM Sans',sans-serif;font-size:.93rem;font-weight:600;cursor:pointer;transition:background .2s;letter-spacing:.02em;}
-.gate-btn:hover{background:var(--teal-l);}
-.gate-note{font-size:.75rem;color:rgba(255,255,255,.25);margin-top:18px;line-height:1.5;}
-.gate-loading{font-size:.85rem;color:rgba(255,255,255,.5);margin-top:14px;display:none;}
-.topbar{background:var(--ink);color:#fff;padding:0 32px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:200;box-shadow:0 2px 12px rgba(0,0,0,.25);}
-.topbar-left{display:flex;align-items:center;gap:16px;}
-.topbar-badge{font-family:'DM Mono',monospace;font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;color:var(--teal-l);background:rgba(20,184,166,.12);border:1px solid rgba(20,184,166,.25);padding:3px 10px;border-radius:4px;}
-.topbar-title{font-family:'DM Serif Display',serif;font-size:1.1rem;color:#fff;}
-.topbar-right{display:flex;align-items:center;gap:12px;}
-.update-tag{font-family:'DM Mono',monospace;font-size:.7rem;color:rgba(255,255,255,.4);letter-spacing:.06em;}
-.data-dot{width:7px;height:7px;background:var(--teal-l);border-radius:50%;animation:blink 2s infinite;}
-@keyframes blink{0%,100%{opacity:1;}50%{opacity:.3;}}
-.filterbar{background:#fff;border-bottom:1px solid var(--border);padding:12px 32px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;position:sticky;top:56px;z-index:190;}
-.filter-label{font-size:.75rem;font-weight:600;color:var(--slate);letter-spacing:.06em;text-transform:uppercase;margin-right:4px;}
-.filter-group{display:flex;gap:6px;align-items:center;}
-.ftag{font-family:'DM Mono',monospace;font-size:.72rem;padding:5px 12px;border-radius:6px;border:1.5px solid var(--border);background:#fff;color:var(--slate);cursor:pointer;transition:all .15s;white-space:nowrap;font-weight:500;}
-.ftag:hover{border-color:var(--teal);color:var(--teal);}
-.ftag.active{background:var(--teal);border-color:var(--teal);color:#fff;}
-.ftag.active-red{background:var(--red);border-color:var(--red);color:#fff;}
-.ftag.active-amber{background:var(--amber);border-color:var(--amber);color:#fff;}
-select.fsel{font-family:'DM Mono',monospace;font-size:.72rem;padding:5px 28px 5px 10px;border-radius:6px;border:1.5px solid var(--border);background:#fff;color:var(--ink);cursor:pointer;outline:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;min-width:160px;}
-select.fsel:focus{border-color:var(--teal);}
-.divider-v{width:1px;height:20px;background:var(--border);margin:0 4px;}
-.clear-btn{font-size:.75rem;color:var(--teal);cursor:pointer;font-weight:500;padding:4px 8px;border-radius:4px;transition:background .15s;}
-.clear-btn:hover{background:var(--teal-pale);}
-.main{max-width:1320px;margin:0 auto;padding:28px 32px 48px;}
-.kpi-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px;margin-bottom:28px;}
-.kpi{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px 20px;box-shadow:var(--shadow);position:relative;overflow:hidden;transition:transform .2s,box-shadow .2s;}
-.kpi:hover{transform:translateY(-2px);box-shadow:var(--shadow-lg);}
-.kpi::before{content:'';position:absolute;top:0;left:0;width:3px;height:100%;border-radius:3px 0 0 3px;}
-.kpi.red::before{background:var(--red);}
-.kpi.amber::before{background:var(--amber);}
-.kpi.green::before{background:var(--green);}
-.kpi.blue::before{background:var(--blue);}
-.kpi.teal::before{background:var(--teal);}
-.kpi.slate::before{background:var(--slate);}
-.kpi-label{font-size:.72rem;font-weight:600;color:var(--slate);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px;}
-.kpi-val{font-family:'DM Serif Display',serif;font-size:2.2rem;font-weight:400;line-height:1;margin-bottom:4px;}
-.kpi.red .kpi-val{color:var(--red);}
-.kpi.amber .kpi-val{color:var(--amber);}
-.kpi.green .kpi-val{color:var(--green);}
-.kpi.blue .kpi-val{color:var(--blue);}
-.kpi.teal .kpi-val{color:var(--teal);}
-.kpi.slate .kpi-val{color:var(--slate);}
-.kpi-sub{font-size:.75rem;color:var(--slate);}
-.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;}
-@media(max-width:900px){.grid-2{grid-template-columns:1fr;}}
-.panel{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:24px;box-shadow:var(--shadow);}
-.panel-title{font-family:'DM Serif Display',serif;font-size:1.1rem;color:var(--ink);margin-bottom:18px;display:flex;align-items:center;justify-content:space-between;}
-.panel-badge{font-family:'DM Mono',monospace;font-size:.68rem;background:var(--teal-pale);color:var(--teal);border:1px solid rgba(13,148,136,.2);padding:2px 8px;border-radius:4px;}
-.bar-row{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
-.bar-label{font-size:.8rem;color:var(--ink3);min-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:0;}
-.bar-track{flex:1;background:#f1f5f9;border-radius:4px;height:10px;overflow:hidden;}
-.bar-fill{height:100%;border-radius:4px;transition:width .6s ease;background:var(--teal);}
-.bar-fill.red{background:var(--red);}
-.bar-fill.amber{background:var(--amber);}
-.bar-count{font-family:'DM Mono',monospace;font-size:.72rem;color:var(--slate);min-width:28px;text-align:right;}
-.ct-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;}
-.ct-tile{border-radius:10px;padding:16px 14px;text-align:center;border:1px solid var(--border);}
-.ct-tile .ct-type{font-family:'DM Mono',monospace;font-size:.7rem;font-weight:500;letter-spacing:.1em;margin-bottom:6px;}
-.ct-tile .ct-num{font-family:'DM Serif Display',serif;font-size:1.8rem;display:block;margin-bottom:2px;}
-.ct-tile .ct-sub{font-size:.7rem;color:var(--slate);}
-.ct-tile.aqw{background:#eff6ff;border-color:#bfdbfe;}.ct-tile.aqw .ct-num{color:var(--blue);}
-.ct-tile.aqo{background:#f0fdf4;border-color:#bbf7d0;}.ct-tile.aqo .ct-num{color:var(--green);}
-.ct-tile.cor{background:#faf5ff;border-color:#e9d5ff;}.ct-tile.cor .ct-num{color:#7c3aed;}
-.ct-tile.inv{background:var(--amber-pale);border-color:#fde68a;}.ct-tile.inv .ct-num{color:var(--amber);}
-.ct-tile.tof{background:var(--red-pale);border-color:#fecaca;}.ct-tile.tof .ct-num{color:var(--red);}
-.urgency-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;}
-.urg-box{border-radius:10px;padding:16px;border:1px solid var(--border);background:var(--card);text-align:center;}
-.urg-box .urg-days{font-family:'DM Mono',monospace;font-size:.7rem;font-weight:500;letter-spacing:.08em;margin-bottom:6px;}
-.urg-box .urg-num{font-family:'DM Serif Display',serif;font-size:2rem;}
-.urg-box .urg-lbl{font-size:.72rem;color:var(--slate);margin-top:2px;}
-.urg-box.u1{background:#fef2f2;border-color:#fecaca;}.urg-box.u1 .urg-num{color:var(--red);}
-.urg-box.u3{background:var(--amber-pale);border-color:#fde68a;}.urg-box.u3 .urg-num{color:var(--amber);}
-.urg-box.u5{background:#fefce8;border-color:#fef08a;}.urg-box.u5 .urg-num{color:#ca8a04;}
-.urg-box.u10{background:var(--teal-pale);border-color:#99f6e4;}.urg-box.u10 .urg-num{color:var(--teal);}
-.case-item{display:flex;align-items:flex-start;gap:14px;padding:12px 0;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s;border-radius:6px;}
-.case-item:last-child{border-bottom:none;}
-.case-item:hover{background:#f8fafc;padding-left:8px;}
-.case-ref{font-family:'DM Mono',monospace;font-size:.72rem;font-weight:500;color:var(--teal);min-width:140px;flex-shrink:0;}
-.case-meta{flex:1;min-width:0;}
-.case-area{font-size:.82rem;font-weight:500;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.case-lead{font-size:.75rem;color:var(--slate);}
-.case-status{flex-shrink:0;text-align:right;}
-.status-pill{font-family:'DM Mono',monospace;font-size:.65rem;padding:3px 8px;border-radius:20px;white-space:nowrap;}
-.pill-red{background:var(--red-pale);color:var(--red);border:1px solid #fecaca;}
-.pill-amber{background:var(--amber-pale);color:var(--amber);border:1px solid #fde68a;}
-.pill-green{background:var(--green-pale);color:var(--green);border:1px solid #bbf7d0;}
-.pill-blue{background:var(--blue-pale);color:var(--blue);border:1px solid #bfdbfe;}
-.case-days{font-family:'DM Mono',monospace;font-size:.7rem;margin-top:3px;}
-.overdue-days{color:var(--red);}
-.due-days{color:var(--amber);}
-.ring-wrap{display:flex;align-items:center;gap:20px;}
-.ring-legend{flex:1;}
-.ring-item{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:.82rem;}
-.ring-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
-.no-results{text-align:center;padding:32px;color:var(--slate);font-size:.88rem;}
-.scroll-panel{max-height:340px;overflow-y:auto;}
-.scroll-panel::-webkit-scrollbar{width:4px;}
-.scroll-panel::-webkit-scrollbar-track{background:#f1f5f9;}
-.scroll-panel::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:2px;}
-@media(max-width:680px){.main,.filterbar,.topbar{padding-left:16px;padding-right:16px;}.kpi-row{grid-template-columns:1fr 1fr;}.ct-grid{grid-template-columns:repeat(3,1fr);}.urgency-strip{grid-template-columns:1fr 1fr;}}
+:root{
+  --ink:#0a0e1a;--slate:#64748b;--border:#e2e8f0;--bg:#f8fafc;--card:#ffffff;
+  --teal:#0d9488;--teal-pale:#f0fdfa;
+  --green:#16a34a;--green-pale:#f0fdf4;
+  --amber:#d97706;--amber-pale:#fffbeb;
+  --red:#dc2626;--red-pale:#fef2f2;
+  --blue:#2563eb;
+}
+
+*{box-sizing:border-box;margin:0;padding:0}
+
+body{
+  font-family:'DM Sans',sans-serif;
+  background:var(--bg);
+  color:var(--ink);
+}
+
+/* ===== GATE ===== */
+#gate{
+  position:fixed;
+  inset:0;
+  background:#0a0e1a;
+  z-index:9999;
+  display:flex;
+  align-items:flex-start;
+  justify-content:center;
+  padding:40px 20px;
+}
+#gate.gone{display:none}
+
+.gate-wrap{
+  background:#1c2235;
+  border-radius:16px;
+  padding:36px 28px;
+  max-width:440px;
+  width:100%;
+  margin:auto;
+  text-align:center;
+}
+
+.gate-logo{
+  font-family:'DM Mono',monospace;
+  font-size:.75rem;
+  letter-spacing:.12em;
+  color:#14b8a6;
+  margin-bottom:16px;
+  text-transform:uppercase;
+}
+
+.gate-title{
+  font-family:'DM Serif Display',serif;
+  font-size:1.6rem;
+  color:#fff;
+  margin-bottom:6px;
+}
+
+.gate-title em{color:#14b8a6;font-style:normal}
+
+.gate-sub{
+  font-size:.84rem;
+  color:rgba(255,255,255,.45);
+  margin-bottom:18px;
+}
+
+.gate-input{
+  width:100%;
+  padding:13px 16px;
+  border-radius:8px;
+  border:1px solid rgba(255,255,255,.12);
+  background:rgba(255,255,255,.06);
+  color:#fff;
+  margin-bottom:10px;
+}
+.gate-input.err{border-color:var(--red)}
+
+.gate-error{
+  font-size:.8rem;
+  color:#f87171;
+  min-height:16px;
+  text-align:left;
+  margin-bottom:12px;
+}
+
+.gate-btn{
+  width:100%;
+  padding:13px;
+  background:var(--teal);
+  color:#fff;
+  border:none;
+  border-radius:8px;
+  font-weight:600;
+  cursor:pointer;
+}
+
+.gate-note{
+  font-size:.75rem;
+  color:rgba(255,255,255,.25);
+  margin-top:18px;
+}
+
+/* ===== DASHBOARD ===== */
+.main{max-width:1320px;margin:0 auto;padding:28px}
+
+.kpi-row{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(180px,1fr));
+  gap:14px;
+  margin-bottom:24px;
+}
+
+.kpi{
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:12px;
+  padding:18px;
+}
+
+.kpi-label{
+  font-size:.72rem;
+  color:var(--slate);
+  text-transform:uppercase;
+  letter-spacing:.06em;
+}
+
+.kpi-val{
+  font-family:'DM Serif Display',serif;
+  font-size:2.1rem;
+  margin:6px 0;
+}
+
+.green{color:var(--green)}
+.red{color:var(--red)}
+.amber{color:var(--amber)}
+.teal{color:var(--teal)}
+.blue{color:var(--blue)}
+
+.kpi-sub{font-size:.75rem;color:var(--slate)}
+
+.panel{
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:14px;
+  padding:22px;
+  margin-bottom:22px;
+}
+
+.panel-title{
+  font-family:'DM Serif Display',serif;
+  font-size:1.1rem;
+  margin-bottom:16px;
+}
+
+.ct-grid{
+  display:grid;
+  grid-template-columns:repeat(5,1fr);
+  gap:12px;
+}
+
+.ct-tile{
+  border:1px solid var(--border);
+  border-radius:10px;
+  padding:14px;
+  text-align:center;
+}
+
+.ct-num{
+  font-family:'DM Serif Display',serif;
+  font-size:1.6rem;
+}
+
+.urgency-strip{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:12px;
+  margin-bottom:22px;
+}
+
+.urg-box{
+  border:1px solid var(--border);
+  background:var(--card);
+  border-radius:10px;
+  padding:14px;
+  text-align:center;
+}
+
+.ring-wrap{
+  display:flex;
+  gap:20px;
+  align-items:center;
+}
+
+.ring-legend{
+  font-size:.82rem;
+}
+
+.ring-item{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  margin-bottom:8px;
+}
+
+.ring-dot{
+  width:10px;
+  height:10px;
+  border-radius:50%;
+}
 </style>
 </head>
+
 <body>
 
+<!-- ===== GATE ===== -->
 <div id="gate">
   <div class="gate-wrap">
-    <div class="gate-logo">SPPG Hospital Care &middot; MoG</div>
+    <div class="gate-logo">SPPG Hospital Care · MoG</div>
     <h1 class="gate-title">Case <em>Dashboard</em></h1>
     <p class="gate-sub">Restricted to HSCNI staff. Enter your HSCNI email to continue.</p>
-    <input class="gate-input" id="gEmail" type="email" placeholder="yourname@hscni.net" onkeydown="if(event.key==='Enter')gateCheck()">
+    <input class="gate-input" id="gEmail" type="email" placeholder="yourname@hscni.net"
+           onkeydown="if(event.key==='Enter')gateCheck()">
     <div class="gate-error" id="gErr"></div>
     <button class="gate-btn" onclick="gateCheck()">Access Dashboard</button>
-    <div class="gate-loading" id="gLoading">Loading case data...</div>
-    <p class="gate-note">@hscni.net addresses only &middot; Contact AQHospitalCare@hscni.net for access issues</p>
+    <p class="gate-note">@hscni.net addresses only</p>
   </div>
 </div>
 
-<div class="topbar">
-  <div class="topbar-left">
-    <div class="topbar-badge">SPPG · MoG</div>
-    <div class="topbar-title">Case Management Dashboard</div>
-  </div>
-  <div class="topbar-right">
-    <div class="data-dot"></div>
-    <div class="update-tag" id="snapshotTag">Loading...</div>
-  </div>
-</div>
-
-<div class="filterbar">
-  <span class="filter-label">Type</span>
-  <div class="filter-group" id="typeFilters">
-    <div class="ftag active" onclick="toggleType('ALL',this)">All</div>
-    <div class="ftag" onclick="toggleType('AQW',this)">AQW</div>
-    <div class="ftag" onclick="toggleType('AQO',this)">AQO</div>
-    <div class="ftag" onclick="toggleType('COR',this)">COR</div>
-    <div class="ftag" onclick="toggleType('INV',this)">INV</div>
-    <div class="ftag" onclick="toggleType('TOF',this)">TOF</div>
-   
-  </div>
-  <div class="divider-v"></div>
-  <span class="filter-label">Status</span>
-  <div class="filter-group" id="statusFilters">
-    <div class="ftag active" onclick="toggleStatus('ALL',this)">All</div>
-    <div class="ftag" onclick="toggleStatus('OPEN',this)">Open</div>
-    <div class="ftag" onclick="toggleStatus('OVERDUE',this)">Overdue</div>
-    <div class="ftag" onclick="toggleStatus('CLOSED',this)">Closed</div>
-  </div>
-  <div class="divider-v"></div>
-  <select class="fsel" id="leadFilter" onchange="applyFilters()"><option value="">All Service Leads</option></select>
-<select class="fsel" id="approverFilter" onchange="applyFilters()"><option value="">All Approvers</option></select>
-  <select class="fsel" id="areaFilter" onchange="applyFilters()"><option value="">All Service Areas</option></select>
-  <div class="clear-btn" onclick="clearFilters()">Clear filters</div>
-</div>
-
+<!-- ===== DASHBOARD ===== -->
 <div class="main">
-  <div class="kpi-row">
-    <div class="kpi teal"><div class="kpi-label">Open Cases</div><div class="kpi-val" id="kOpenCases">—</div><div class="kpi-sub">currently live</div></div>
-    <div class="kpi red"><div class="kpi-label">Overdue</div><div class="kpi-val" id="kOverdue">—</div><div class="kpi-sub">past deadline</div></div>
-    <div class="kpi amber"><div class="kpi-label">% Overdue</div><div class="kpi-val" id="kPctOverdue">—</div><div class="kpi-sub">of open cases</div></div>
-    <div class="kpi green"><div class="kpi-label">Completed</div><div class="kpi-val" id="kClosed">—</div><div class="kpi-sub">total closed</div></div>
-    <div class="kpi blue"><div class="kpi-label">On Time %</div><div class="kpi-val" id="kOnTime">—</div><div class="kpi-sub">of closed cases</div></div>
-    <div class="kpi slate"><div class="kpi-label">Avg Turnaround</div><div class="kpi-val" id="kAvgTurn">—</div><div class="kpi-sub">days (closed)</div></div>
-    <div class="kpi amber"><div class="kpi-label">Total Cases</div><div class="kpi-val" id="kTotal">—</div><div class="kpi-sub">in dataset</div></div>
-    <div class="kpi red"><div class="kpi-label">Transferred</div><div class="kpi-val" id="kTransferred">—</div><div class="kpi-sub">out of Directorate</div></div>
+
+<div class="kpi-row">
+  <div class="kpi"><div class="kpi-label">Open</div><div class="kpi-val teal" id="kOpen">—</div><div class="kpi-sub">live</div></div>
+  <div class="kpi"><div class="kpi-label">Overdue</div><div class="kpi-val red" id="kOverdue">—</div><div class="kpi-sub">past deadline</div></div>
+  <div class="kpi"><div class="kpi-label">Completed</div><div class="kpi-val green" id="kClosed">—</div><div class="kpi-sub">closed</div></div>
+  <div class="kpi"><div class="kpi-label">On Time %</div><div class="kpi-val blue" id="kOnTime">—</div><div class="kpi-sub">closed</div></div>
+  <div class="kpi"><div class="kpi-label">Transferred</div><div class="kpi-val red" id="kTransferred">—</div><div class="kpi-sub">out</div></div>
+</div>
+
+<div class="urgency-strip">
+  <div class="urg-box"><div>≤1 day</div><div id="u1">—</div></div>
+  <div class="urg-box"><div>≤3 days</div><div id="u3">—</div></div>
+  <div class="urg-box"><div>≤5 days</div><div id="u5">—</div></div>
+  <div class="urg-box"><div>≤10 days</div><div id="u10">—</div></div>
+</div>
+
+<div class="panel">
+  <div class="panel-title">Cases by Type</div>
+  <div class="ct-grid">
+    <div class="ct-tile"><div>AQW</div><div class="ct-num" id="ct-AQW">—</div><div id="cs-AQW"></div></div>
+    <div class="ct-tile"><div>AQO</div><div class="ct-num" id="ct-AQO">—</div><div id="cs-AQO"></div></div>
+    <div class="ct-tile"><div>COR</div><div class="ct-num" id="ct-COR">—</div><div id="cs-COR"></div></div>
+    <div class="ct-tile"><div>INV</div><div class="ct-num" id="ct-INV">—</div><div id="cs-INV"></div></div>
+    <div class="ct-tile"><div>TOF</div><div class="ct-num" id="ct-TOF">—</div><div id="cs-TOF"></div></div>
   </div>
-  <div class="urgency-strip">
-    <div class="urg-box u1"><div class="urg-days">≤ 1 DAY</div><div class="urg-num" id="uDue1">—</div><div class="urg-lbl">Due today / tomorrow</div></div>
-    <div class="urg-box u3"><div class="urg-days">≤ 3 DAYS</div><div class="urg-num" id="uDue3">—</div><div class="urg-lbl">Due in 3 working days</div></div>
-    <div class="urg-box u5"><div class="urg-days">≤ 5 DAYS</div><div class="urg-num" id="uDue5">—</div><div class="urg-lbl">Due in 5 working days</div></div>
-    <div class="urg-box u10"><div class="urg-days">≤ 10 DAYS</div><div class="urg-num" id="uDue10">—</div><div class="urg-lbl">Due in 10 working days</div></div>
-  </div>
-  <div class="grid-2" style="margin-bottom:20px;">
-    <div class="panel">
-      <div class="panel-title">Cases by Type <span class="panel-badge" id="ctBadge">All</span></div>
-      <div class="ct-grid">
-        <div class="ct-tile aqw"><div class="ct-type">AQW</div><span class="ct-num" id="ct-AQW">—</span><div class="ct-sub" id="ctsub-AQW">—</div></div>
-        <div class="ct-tile aqo"><div class="ct-type">AQO</div><span class="ct-num" id="ct-AQO">—</span><div class="ct-sub" id="ctsub-AQO">—</div></div>
-        <div class="ct-tile cor"><div class="ct-type">COR</div><span class="ct-num" id="ct-COR">—</span><div class="ct-sub" id="ctsub-COR">—</div></div>
-        <div class="ct-tile inv"><div class="ct-type">INV</div><span class="ct-num" id="ct-INV">—</span><div class="ct-sub" id="ctsub-INV">—</div></div>
-        <div class="ct-tile tof"><div class="ct-type">TOF</div><span class="ct-num" id="ct-TOF">—</span><div class="ct-sub" id="ctsub-TOF">—</div></div>
-       </div>
-    </div>
-    <div class="panel">
-      <div class="panel-title">Performance Overview</div>
-      <div class="ring-wrap">
-        <div style="position:relative;width:130px;height:130px;flex-shrink:0;">
-          <canvas id="ringCanvas" width="130" height="130"></canvas>
-          <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;">
-            <span id="ringPct" style="font-family:'DM Serif Display',serif;font-size:1.35rem;color:#0a0e1a;line-height:1;">—</span>
-            <span style="font-family:'DM Sans',sans-serif;font-size:.65rem;color:#64748b;margin-top:2px;">on time</span>
-          </div>
-        </div>
-        <div class="ring-legend">
-          <div class="ring-item"><div class="ring-dot" style="background:var(--green)"></div><span id="rl-ontime">—</span></div>
-          <div class="ring-item"><div class="ring-dot" style="background:var(--red)"></div><span id="rl-late">—</span></div>
-          <div class="ring-item"><div class="ring-dot" style="background:var(--amber)"></div><span id="rl-overdue">—</span></div>
-          <div class="ring-item"><div class="ring-dot" style="background:var(--teal)"></div><span id="rl-open">—</span></div>
-        </div>
+</div>
+
+<div class="panel">
+  <div class="panel-title">Performance Overview</div>
+  <div class="ring-wrap">
+    <div style="position:relative;width:130px;height:130px">
+      <canvas id="ring" width="130" height="130"></canvas>
+      <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center">
+        <span id="ringPct" style="font-family:'DM Serif Display',serif;font-size:1.4rem">—</span>
       </div>
     </div>
+    <div class="ring-legend">
+      <div class="ring-item"><span class="ring-dot" style="background:var(--green)"></span><span id="lOn">—</span></div>
+      <div class="ring-item"><span class="ring-dot" style="background:var(--amber)"></span><span id="lLate">—</span></div>
+      <div class="ring-item"><span class="ring-dot" style="background:var(--red)"></span><span id="lOver">—</span></div>
+      <div class="ring-item"><span class="ring-dot" style="background:var(--teal)"></span><span id="lOpen">—</span></div>
+    </div>
   </div>
-  <div class="grid-2" style="margin-bottom:20px;">
-    <div class="panel"><div class="panel-title">Top Service Areas <span class="panel-badge">Open cases</span></div><div class="scroll-panel" id="areaChart"></div></div>
-    <div class="panel"><div class="panel-title">Service Leads — Workload <span class="panel-badge">Open cases</span></div><div class="scroll-panel" id="leadChart"></div></div>
-   <div class="panel"><div class="panel-title">Approvers — Workload <span class="panel-badge">Open cases</span></div><div class="scroll-panel" id="approverChart"></div>
 </div>
 
-  </div>
-  <div class="panel" style="margin-bottom:20px;"><div class="panel-title">Overdue Open Cases <span class="panel-badge" id="overdueCount">0</span></div><div class="scroll-panel" id="overdueList"></div></div>
-  <div class="panel" style="margin-bottom:20px;"><div class="panel-title">Due in Next 5 Days <span class="panel-badge" id="dueSoonCount">0</span></div><div class="scroll-panel" id="dueSoonList"></div></div>
-  <div class="panel"><div class="panel-title">All Filtered Cases <span class="panel-badge" id="allCount">0</span></div><div class="scroll-panel" style="max-height:420px;" id="allList"></div></div>
 </div>
+
 <script>
-let RAW = [];
+let RAW=[],loaded=false;
 
-// ---------------- LOAD JSON ---------------- //
 fetch("MasterLog.json")
-  .then(r => r.json())
-  .then(data => {
-      RAW = data;
-      console.log("MasterLog loaded:", RAW.length, "records");
+  .then(r=>r.json())
+  .then(d=>{RAW=d;loaded=true});
 
-      initDropdowns();
-      setSnapshotDate();
-  })
-  .catch(err => {
-      console.error("Error loading MasterLog.json:", err);
-      document.getElementById("snapshotTag").innerText = "Load error";
-  });
+const base=()=>RAW.filter(r=>r.status!=="Transferred");
+const onTime=r=>r.isClosed&&r.closed&&r.due&&new Date(r.closed)<=new Date(r.due);
 
-let activeType='ALL', activeStatus='ALL', activeLead='', activeArea='', activeApprover='';
-
-// ---------------- GATE ---------------- //
 function gateCheck(){
-  const e = document.getElementById('gEmail').value.trim().toLowerCase();
-  const err = document.getElementById('gErr');
-  const inp = document.getElementById('gEmail');
-
-  if(!e){
-      err.textContent='Please enter your email.';
-      inp.classList.add('err');
-      return;
-  }
-  if(!e.endsWith('@hscni.net')){
-      err.textContent='Access restricted to @hscni.net addresses only.';
-      inp.classList.add('err');
-      return;
-  }
-
-  err.textContent='';
-  inp.classList.remove('err');
-
+  const e=document.getElementById('gEmail').value.trim().toLowerCase();
+  const err=document.getElementById('gErr');
+  if(!e.endsWith('@hscni.net')){err.textContent='HSCNI emails only';return}
+  if(!loaded){err.textContent='Loading data…';return}
   document.getElementById('gate').classList.add('gone');
-
-  renderAll(filtered());
+  render();
 }
 
-// ---------------- SNAPSHOT DATE ---------------- //
-function setSnapshotDate(){
-    const today = new Date();
-    const d = today.getDate().toString().padStart(2,'0');
-    const m = today.toLocaleString('en-GB',{month:'short'});
-    const y = today.getFullYear();
-    document.getElementById('snapshotTag').textContent = `Data snapshot: ${d} ${m} ${y}`;
-}
+function render(){
+  const b=base();
+  const open=b.filter(r=>r.isOpen);
+  const overdue=b.filter(r=>r.isOverdue);
+  const closed=b.filter(r=>r.isClosed);
+  const ot=closed.filter(onTime);
+  const late=closed.length-ot.length;
 
-// ---------------- DROPDOWNS ---------------- //
-function initDropdowns(){
-    const leads=[...new Set(
-        RAW.map(r => (r.lead || "").trim().replace(/\u00A0/g, " "))
-            .filter(l => l && l !== "Transferred" && l !== "Orphan")
-    )].sort();
+  kOpen.textContent=open.length;
+  kOverdue.textContent=overdue.length;
+  kClosed.textContent=closed.length;
+  kOnTime.textContent=closed.length?Math.round(ot.length/closed.length*100)+'%':'0%';
+  kTransferred.textContent=RAW.filter(r=>r.status==='Transferred').length;
 
-    const areas=[...new Set(
-        RAW.map(r=>r.area.trim()).filter(Boolean)
-    )].sort();
-
-    const ls=document.getElementById('leadFilter');
-    leads.forEach(l=>{
-        let o=document.createElement('option');
-        o.value=l;
-        o.textContent=l;
-        ls.appendChild(o);
-    });
-
-    const as=document.getElementById('areaFilter');
-    areas.forEach(a=>{
-        let o=document.createElement('option');
-        o.value=a;
-        o.textContent=a;
-        as.appendChild(o);
-    });
-
-    populateApproverFilter();
-}
-
-function populateApproverFilter(){
-    const sel=document.getElementById('approverFilter');
-    const approvers=[...new Set(
-        RAW.map(r=>(r.approver||'').trim()).filter(a=>a!=="")
-    )].sort();
-
-    approvers.forEach(a=>{
-        let o=document.createElement('option');
-        o.value=a;
-        o.textContent=a;
-        sel.appendChild(o);
-    });
-}
-
-// ---------------- FILTER ENGINE ---------------- //
-function filtered(){
-  return RAW.filter(r=>{
-    if(activeType!=='ALL' && r.type!==activeType) return false;
-    if(activeStatus==='OPEN' && (!r.isOpen || r.status==='Transferred')) return false;
-    if(activeStatus==='OVERDUE' && !r.isOverdue) return false;
-    if(activeStatus==='CLOSED' && !r.isClosed) return false;
-    if(activeLead && r.lead.trim()!==activeLead) return false;
-    if(activeArea && r.area.trim()!==activeArea) return false;
-    if(activeApprover && r.approver.trim()!==activeApprover) return false;
-    return true;
-  });
-}
-
-function applyFilters(){
-    activeLead    = document.getElementById('leadFilter').value || "";
-    activeArea    = document.getElementById('areaFilter').value || "";
-    activeApprover= document.getElementById('approverFilter').value || "";
-    renderAll(filtered());
-}
-
-function toggleType(t,el){
-    activeType = t;
-    document.querySelectorAll('#typeFilters .ftag').forEach(e=>e.classList.remove('active'));
-    el.classList.add('active');
-    renderAll(filtered());
-}
-
-function toggleStatus(s,el){
-    activeStatus = s;
-    document.querySelectorAll('#statusFilters .ftag')
-      .forEach(e=>e.classList.remove('active','active-red','active-amber'));
-
-    el.classList.add(
-        s==='OVERDUE' ? 'active-red' :
-        s==='OPEN'    ? 'active-amber' : 'active'
-    );
-
-    renderAll(filtered());
-}
-
-function clearFilters(){
-    activeType='ALL';
-    activeStatus='ALL';
-    activeLead='';
-    activeArea='';
-    activeApprover='';
-
-    document.getElementById('leadFilter').value='';
-    document.getElementById('areaFilter').value='';
-    document.getElementById('approverFilter').value='';
-
-    document.querySelectorAll('#typeFilters .ftag')
-      .forEach((e,i)=>e.classList.toggle('active',i===0));
-
-    document.querySelectorAll('#statusFilters .ftag')
-      .forEach((e,i)=>{e.classList.toggle('active',i===0);
-                       e.classList.remove('active-red','active-amber');});
-
-    renderAll(filtered());
-}
-
-// ---------------- MASTER RENDER CONTROLLER ---------------- //
-function renderAll(data){
-    renderKPIs(data);
-    renderUrgency(data);
-    renderCaseTypes(data);
-    renderRing(data);
-    renderAreaChart(data);
-    renderLeadChart(data);
-    renderApproverChart(data);
-    renderOverdueList(data);
-    renderDueSoonList(data);
-    renderAllList(data);
-}
-
-// ---------------- KPI RENDERING ---------------- //
-function renderKPIs(data){
-  const open = data.filter(r =>
-      r.isOpen && r.status !== 'Transferred'
-  ).length;
-
-  const overdue = data.filter(r =>
-      r.isOverdue && r.status !== 'Transferred'
-  ).length;
-
-  const closed = data.filter(r =>
-      r.isClosed && r.status !== 'Transferred'
-  ).length;
-
-  const transferred = data.filter(r =>
-      r.status === 'Transferred'
-  ).length;
-
-  const pctOverdue = open > 0 ? Math.round((overdue / open) * 100) : 0;
-
-  const closedOnTime = data.filter(r =>
-      r.isClosed && r.onTime === true && r.status !== 'Transferred'
-  ).length;
-
-  const pctOnTime = closed > 0 ? Math.round((closedOnTime / closed) * 100) : 0;
-
-  const turns = data
-      .filter(r =>
-          r.isClosed &&
-          r.turnaround !== null &&
-          r.turnaround >= 0 &&
-          r.status !== 'Transferred'
-      )
-      .map(r => r.turnaround);
-
-  const avgTurn = turns.length > 0
-      ? Math.round(turns.reduce((a, b) => a + b, 0) / turns.length)
-      : 0;
-
-  document.getElementById('kOpenCases').textContent = open;
-  document.getElementById('kOverdue').textContent = overdue;
-  document.getElementById('kPctOverdue').textContent = pctOverdue + '%';
-  document.getElementById('kClosed').textContent = closed;
-  document.getElementById('kOnTime').textContent = pctOnTime + '%';
-  document.getElementById('kAvgTurn').textContent = avgTurn + 'd';
-  document.getElementById('kTotal').textContent = data.length;
-  document.getElementById('kTransferred').textContent = transferred;
-}
-
-// ---------------- OVERDUE CASES ---------------- //
-function renderOverdueList(data){
-  const items = data.filter(r =>
-      r.isOverdue && r.status !== 'Transferred'
-  ).sort((a,b) => (a.daysUntilDue || 0) - (b.daysUntilDue || 0));
-
-  document.getElementById('overdueCount').textContent = items.length;
-  document.getElementById('overdueList').innerHTML =
-      items.length ? items.map(caseItem).join('') :
-      '<div class="no-results">No overdue cases 🎉</div>';
-}
-
-// ---------------- DUE SOON ---------------- //
-function renderDueSoonList(data){
-  const items = data.filter(r =>
-      r.isOpen &&
-      r.status !== 'Transferred' &&
-      !r.isOverdue &&
-      r.daysUntilDue !== null &&
-      r.daysUntilDue <= 5
-  ).sort((a,b)=> a.daysUntilDue - b.daysUntilDue);
-
-  document.getElementById('dueSoonCount').textContent = items.length;
-
-  document.getElementById('dueSoonList').innerHTML =
-      items.length ? items.map(caseItem).join('') :
-      '<div class="no-results">No cases due in 5 days.</div>';
-}
-
-// ---------------- ALL CASES ---------------- //
-function renderAllList(data){
-  const sorted = [...data]
-      .filter(r => r.status !== 'Transferred')
-      .sort((a,b)=>{
-          if (a.isOverdue && !b.isOverdue) return -1;
-          if (!a.isOverdue && b.isOverdue) return 1;
-          return (a.daysUntilDue || 999) - (b.daysUntilDue || 999);
-      });
-
-  document.getElementById('allCount').textContent = sorted.length;
-  document.getElementById('allList').innerHTML =
-      sorted.length ? sorted.map(caseItem).join('') :
-      '<div class="no-results">No cases match filters.</div>';
-}
-
-// ---------------- LEAD WORKLOAD ---------------- //
-function renderLeadChart(data){
-  const open = data.filter(r =>
-      r.isOpen && r.status !== 'Transferred'
-  );
-
-  const counts = {};
-  open.forEach(r => {
-      const l = r.lead.trim();
-      counts[l] = (counts[l] || 0) + 1;
-  });
-
-  const sorted = Object.entries(counts)
-      .sort((a,b)=> b[1] - a[1])
-      .slice(0,12);
-
-  const max = sorted.length ? sorted[0][1] : 0;
-
-  document.getElementById('leadChart').innerHTML =
-      sorted.length ? sorted.map(e => {
-          const lead = e[0];
-          const total = e[1];
-          const overdue = open.filter(r => r.lead.trim() === lead && r.isOverdue).length;
-
-          const cls = overdue > total * 0.7 ? 'red'
-                    : overdue > total * 0.4 ? 'amber'
-                    : 'teal';
-
-          return bar(lead,total,max,cls);
-      }).join('')
-      : '<div class="no-results">No data.</div>';
-}
-
-// ---------------- APPROVER WORKLOAD ---------------- //
-function renderApproverChart(data){
-  const open = data.filter(r =>
-      r.isOpen && r.status !== 'Transferred'
-  );
-
-  const counts = {};
-  open.forEach(r => {
-      const a = r.approver.trim();
-      if (a) counts[a] = (counts[a] || 0) + 1;
-  });
-
-  const sorted = Object.entries(counts)
-      .sort((a,b)=> b[1] - a[1])
-      .slice(0,12);
-
-  const max = sorted.length ? sorted[0][1] : 0;
-
-  document.getElementById('approverChart').innerHTML =
-      sorted.length ? sorted.map(e => {
-          const approver = e[0];
-          const total = e[1];
-          const overdue = open.filter(r => r.approver.trim() === approver && r.isOverdue).length;
-
-          const cls = overdue > total * 0.7 ? 'red'
-                    : overdue > total * 0.4 ? 'amber'
-                    : 'teal';
-
-          return bar(approver,total,max,cls);
-      }).join('')
-      : '<div class="no-results">No data.</div>';
-}
-
-// ---------------- URGENCY ---------------- //
-function renderUrgency(data){
-  const open = data.filter(r =>
-      r.isOpen &&
-      r.status !== 'Transferred' &&
-      !r.isOverdue
-  );
-
-  document.getElementById('uDue1').textContent =
-      open.filter(r => r.daysUntilDue !== null && r.daysUntilDue <= 1 && r.daysUntilDue >= 0).length;
-
-  document.getElementById('uDue3').textContent =
-      open.filter(r => r.daysUntilDue !== null && r.daysUntilDue <= 3 && r.daysUntilDue >= 0).length;
-
-  document.getElementById('uDue5').textContent =
-      open.filter(r => r.daysUntilDue !== null && r.daysUntilDue <= 5 && r.daysUntilDue >= 0).length;
-
-  document.getElementById('uDue10').textContent =
-      open.filter(r => r.daysUntilDue !== null && r.daysUntilDue <= 10 && r.daysUntilDue >= 0).length;
-}
-
-// ---------------- CASE TYPES ---------------- //
-function renderCaseTypes(data){
   ['AQW','AQO','COR','INV','TOF'].forEach(t=>{
-      const subset = data.filter(r => r.type === t);
-
-      const open = subset.filter(r =>
-          r.isOpen &&
-          r.status !== 'Transferred' &&
-          !r.isClosed
-      ).length;
-
-      document.getElementById('ct-'+t).textContent = subset.length;
-      document.getElementById('ctsub-'+t).textContent = open + ' open';
+    const s=b.filter(r=>r.type===t);
+    document.getElementById('ct-'+t).textContent=s.length;
+    document.getElementById('cs-'+t).textContent=s.filter(r=>r.isOpen).length+' open';
   });
 
-  document.getElementById('ctBadge').textContent =
-      activeType==='ALL' ? 'All types' : activeType;
+  [1,3,5,10].forEach(d=>{
+    document.getElementById('u'+d).textContent=
+      open.filter(r=>!r.isOverdue&&r.daysUntilDue>=0&&r.daysUntilDue<=d).length;
+  });
+
+  drawRing(ot.length,late,overdue.length,open.length-overdue.length);
 }
 
-// ---------------- RING CHART ---------------- //
-function renderRing(data){
-  const closed = data.filter(r=>r.isClosed);
-  const onTime = closed.filter(r=>r.onTime===true).length;
-  const late   = closed.filter(r=>r.onTime===false).length;
-
-  const overdue= data.filter(r=>r.isOverdue).length;
-  const openOk = data.filter(r=>r.isOpen && !r.isOverdue).length;
-
-  const total = onTime+late+overdue+openOk || 1;
-  const pct   = closed.length>0 ? Math.round(onTime/closed.length*100):0;
-
-  document.getElementById('ringPct').textContent=pct+'%';
-  document.getElementById('rl-ontime').textContent   = `${onTime} completed on time`;
-  document.getElementById('rl-late').textContent     = `${late} completed late`;
-  document.getElementById('rl-overdue').textContent  = `${overdue} open & overdue`;
-  document.getElementById('rl-open').textContent     = `${openOk} open & on track`;
-
-  const canvas=document.getElementById('ringCanvas');
-  if(!canvas) return;
-
-  const ctx=canvas.getContext('2d');
-  const cx=65, cy=65, r=48, lw=14;
+function drawRing(ot,late,over,ok){
+  const c=document.getElementById('ring'),ctx=c.getContext('2d');
   ctx.clearRect(0,0,130,130);
-
-  const segments=[
-      {val:onTime,color:'#16a34a'},
-      {val:late,color:'#d97706'},
-      {val:overdue,color:'#dc2626'},
-      {val:openOk,color:'#0d9488'}
-  ].filter(s=>s.val>0);
-
-  if(!segments.length){
-      ctx.beginPath();
-      ctx.arc(cx,cy,r,0,2*Math.PI);
-      ctx.strokeStyle='#f1f5f9';
-      ctx.lineWidth=lw;
-      ctx.stroke();
-      return;
-  }
-
-  let start=-Math.PI/2;
-  const gap=0.03;
-  const totalGap=gap*segments.length;
-
-  segments.forEach(s=>{
-      const sweep=(s.val/total)*(2*Math.PI-totalGap);
-      ctx.beginPath();
-      ctx.arc(cx,cy,r,start,start+sweep);
-      ctx.strokeStyle=s.color;
-      ctx.lineWidth=lw;
-      ctx.lineCap='round';
-      ctx.stroke();
-      start+=sweep+gap;
+  const dat=[[ot,'#16a34a'],[late,'#d97706'],[over,'#dc2626'],[ok,'#0d9488']];
+  const tot=dat.reduce((a,b)=>a+b[0],0)||1;
+  let st=-Math.PI/2;
+  dat.forEach(([v,col])=>{
+    if(!v)return;
+    const a=v/tot*2*Math.PI;
+    ctx.beginPath();ctx.arc(65,65,48,st,st+a);
+    ctx.strokeStyle=col;ctx.lineWidth=14;ctx.stroke();
+    st+=a;
   });
-}
-
-// ---------------- BAR TEMPLATE ---------------- //
-function bar(label,count,max,cls){
-    const pct=max>0 ? Math.round(count/max*100) : 0;
-    return `
-        <div class="bar-row">
-            <div class="bar-label" title="${label}">${label}</div>
-            <div class="bar-track">
-                <div class="bar-fill ${cls||''}" style="width:${pct}%"></div>
-            </div>
-            <div class="bar-count">${count}</div>
-        </div>`;
-}
-
-// ---------------- AREA CHART ---------------- //
-function renderAreaChart(data){
-  const open=data.filter(r=>r.isOpen && r.status!=='Transferred');
-  const counts={};
-
-  open.forEach(r=>{
-      const a=r.area.trim();
-      counts[a]=(counts[a]||0)+1;
-  });
-
-  const sorted=Object.entries(counts)
-      .sort((a,b)=>b[1]-a[1])
-      .slice(0,15);
-
-  const max=sorted.length?sorted[0]1;
-
-  document.getElementById('areaChart').innerHTML =
-      sorted.length
-      ? sorted.map(e=>bar(e[0],e[1],max,'teal')).join('')
-      : '<div class="no-results">No open cases.</div>';
-}
-
-// ---------------- CASE LISTS ---------------- //
-function statusPill(r){
-  if (r.status === 'Transferred') {
-      return '<span class="status-pill pill-grey">Transferred</span>';
-  }
-  if (r.isOverdue)
-      return '<span class="status-pill pill-red">Overdue</span>';
-  if (r.isClosed && r.onTime === true)
-      return '<span class="status-pill pill-green">On Time</span>';
-  if (r.isClosed && r.onTime === false)
-      return '<span class="status-pill pill-amber">Late</span>';
-  if (r.isClosed)
-      return '<span class="status-pill pill-blue">Closed</span>';
-  if (r.isOpen)
-      return '<span class="status-pill pill-blue">In Progress</span>';
-
-  return `<span class="status-pill pill-amber">${r.status}</span>`;
-}
-
-function daysTag(r){
-  if(!r.isOpen) return '';
-  if(r.isOverdue) return `<div class="case-days overdue-days">${Math.abs(r.daysUntilDue||0)}d overdue</div>`;
-  if(r.daysUntilDue!==null && r.daysUntilDue<=5)
-      return `<div class="case-days due-days">Due in ${r.daysUntilDue}d</div>`;
-  return '';
-}
-
-function caseItem(r){
-  return `
-    <div class="case-item">
-        <div class="case-ref">${r.ref.trim()}</div>
-        <div class="case-meta">
-            <div class="case-area">${r.area}</div>
-            <div class="case-lead">${r.lead} · ${r.type} · Due: ${r.due||'—'}</div>
-        </div>
-        <div class="case-status">${statusPill(r)}${daysTag(r)}</div>
-    </div>`;
+  ringPct.textContent=ot?Math.round(ot/(ot+late)*100)+'%':'0%';
+  lOn.textContent=ot+' completed on time';
+  lLate.textContent=late+' completed late';
+  lOver.textContent=over+' open & overdue';
+  lOpen.textContent=ok+' open & on track';
 }
 </script>
+
 </body>
 </html>
