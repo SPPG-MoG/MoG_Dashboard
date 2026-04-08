@@ -134,6 +134,10 @@ select.fsel:focus{border-color:var(--teal);}
 .overdue-days{color:var(--red);}
 .due-days{color:var(--amber);}
 .no-results{text-align:center;padding:28px;color:var(--slate);font-size:.86rem;}
+.email-link{display:inline-flex;align-items:center;gap:4px;margin-top:5px;font-family:'DM Mono',monospace;font-size:.63rem;color:var(--teal);text-decoration:none;padding:2px 7px;border:1px solid rgba(13,148,136,.3);border-radius:4px;background:var(--teal-pale);transition:all .15s;}
+.email-link:hover{background:var(--teal);color:#fff;border-color:var(--teal);}
+.email-link svg{width:10px;height:10px;flex-shrink:0;}
+.no-email{font-family:'DM Mono',monospace;font-size:.63rem;color:#cbd5e1;margin-top:5px;display:inline-block;}
 @media(max-width:680px){
   .main,.filterbar,.topbar{padding-left:16px;padding-right:16px;}
   .kpi-row{grid-template-columns:1fr 1fr;}
@@ -205,10 +209,10 @@ select.fsel:focus{border-color:var(--teal);}
   </div>
 
   <div class="urgency-strip">
-    <div class="urg-box u1"><div class="urg-days">≤ 1 DAY</div><div class="urg-num" id="uDue1">—</div><div class="urg-lbl">Due today / tomorrow</div></div>
-    <div class="urg-box u3"><div class="urg-days">≤ 3 DAYS</div><div class="urg-num" id="uDue3">—</div><div class="urg-lbl">Due within 3 days</div></div>
-    <div class="urg-box u5"><div class="urg-days">≤ 5 DAYS</div><div class="urg-num" id="uDue5">—</div><div class="urg-lbl">Due within 5 days</div></div>
-    <div class="urg-box u10"><div class="urg-days">≤ 10 DAYS</div><div class="urg-num" id="uDue10">—</div><div class="urg-lbl">Due within 10 days</div></div>
+    <div class="urg-box u1"><div class="urg-days">&#8804; 1 DAY</div><div class="urg-num" id="uDue1">—</div><div class="urg-lbl">Due today / tomorrow</div></div>
+    <div class="urg-box u3"><div class="urg-days">&#8804; 3 DAYS</div><div class="urg-num" id="uDue3">—</div><div class="urg-lbl">Due within 3 days</div></div>
+    <div class="urg-box u5"><div class="urg-days">&#8804; 5 DAYS</div><div class="urg-num" id="uDue5">—</div><div class="urg-lbl">Due within 5 days</div></div>
+    <div class="urg-box u10"><div class="urg-days">&#8804; 10 DAYS</div><div class="urg-num" id="uDue10">—</div><div class="urg-lbl">Due within 10 days</div></div>
   </div>
 
   <div class="grid-2" style="margin-bottom:20px;">
@@ -263,6 +267,18 @@ select.fsel:focus{border-color:var(--teal);}
 </div>
 
 <script>
+// ── CONFIG ────────────────────────────────────────────────────────────────────
+var SP_BASE = 'https://hscni.sharepoint.com/sites/HSCNI-SPPG-MCP/MoG_Emails/';
+
+// Cleans ref for use as a filename: trims, replaces / with -
+function cleanRef(ref){
+  return (ref||'').trim().replace(/\//g, '-');
+}
+
+function emailUrl(ref){
+  return SP_BASE + encodeURIComponent(cleanRef(ref)) + '.pdf';
+}
+
 // ── DATA ──────────────────────────────────────────────────────────────────────
 var RAW = [];
 
@@ -457,12 +473,11 @@ function renderRing(data){
   var cx=65, cy=65, r=48, lw=14;
   ctx.clearRect(0,0,130,130);
 
-  // Fixed colour mapping — never reorders
   var SEGMENTS = [
-    { val: onTime,  color: '#16a34a' },  // green  — completed on time
-    { val: late,    color: '#d97706' },  // amber  — completed late
-    { val: overdue, color: '#dc2626' },  // red    — open & overdue
-    { val: openOk,  color: '#0d9488' }   // teal   — open & on track
+    { val: onTime,  color: '#16a34a' },
+    { val: late,    color: '#d97706' },
+    { val: overdue, color: '#dc2626' },
+    { val: openOk,  color: '#0d9488' }
   ].filter(function(s){ return s.val>0; });
 
   if(!SEGMENTS.length){
@@ -544,12 +559,21 @@ function daysTag(r){
   return '';
 }
 
+// ── EMAIL LINK ────────────────────────────────────────────────────────────────
+function emailTag(r){
+  var url = emailUrl(r.ref);
+  return '<a class="email-link" href="'+url+'" target="_blank" title="Open email for '+r.ref.trim()+'">' +
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 7l10 7 10-7"/></svg>' +
+    'View Email</a>';
+}
+
 function caseItem(r){
   return '<div class="case-item">'+
     '<div class="case-ref">'+r.ref.trim()+'</div>'+
     '<div class="case-meta">'+
       '<div class="case-area">'+r.area+'</div>'+
       '<div class="case-lead">'+(r.lead||'—')+' · '+r.type+' · Due: '+(r.due||'—')+'</div>'+
+      emailTag(r)+
     '</div>'+
     '<div class="case-status">'+statusPill(r)+daysTag(r)+'</div>'+
   '</div>';
@@ -562,7 +586,7 @@ function renderOverdueList(data){
   document.getElementById('overdueCount').textContent=items.length;
   document.getElementById('overdueList').innerHTML=items.length?
     items.map(caseItem).join(''):
-    '<div class="no-results">No overdue cases 🎉</div>';
+    '<div class="no-results">No overdue cases &#127881;</div>';
 }
 
 function renderDueSoonList(data){
