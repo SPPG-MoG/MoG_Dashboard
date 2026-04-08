@@ -264,7 +264,7 @@ select.fsel:focus{border-color:var(--teal);}
 
 <script>
 // ── DATA ──────────────────────────────────────────────────────────────────────
-var RAW = [{"ref": "TOF-0427-2026", "type": "TOF", "status": "In Progress", "received": "2026-04-01", "due": "2026-04-17", "closed": "", "area": "Diabetes", "subject": "Continuous Glucose Monitor (CGM)", "lead": "Joanne McKissick", "approver": "Roger Kennedy", "daysUntilDue": 10, "isOpen": true, "isClosed": false, "isOverdue": false, "isTransferred": false, "onTime": false, "turnaround": null}, {"ref": "COR-0617-2026", "type": "COR", "status": "In Progress", "received": "2026-04-01", "due": "2026-04-10", "closed": "", "area": "Gastroenterology", "subject": "Acid Reflux", "lead": "Michael Taylor", "approver": "Roger Kennedy", "daysUntilDue": 3, "isOpen": true, "isClosed": false, "isOverdue": false, "isTransferred": false, "onTime": false, "turnaround": null}, {"ref": "TOF-0429-2026", "type": "TOF", "status": "In Progress", "received": "2026-04-01", "due": "2026-04-17", "closed": "", "area": "Gastroenterology", "subject": "Acid Reflux", "lead": "Michael Taylor", "approver": "Roger Kennedy", "daysUntilDue": 10, "isOpen": true, "isClosed": false, "isOverdue": false, "isTransferred": false, "onTime": false, "turnaround": null}, {"ref": "TOF-0432-2026", "type": "TOF", "status": "In Progress", "received": "2026-04-01", "due": "2026-04-17", "closed": "", "area": "Neurology", "subject": "Epilepsy", "lead": "Bernie Mooty", "approver": "Laura Gillespie", "daysUntilDue": 10, "isOpen": true, "isClosed": false, "isOverdue": false, "isTransferred": false, "onTime": false, "turnaround": null}, {"ref": "AQW 43552/22-27", "type": "AQW", "status": "In Progress", "received": "2026-04-01", "due": "2026-04-09", "closed": "", "area": "Cardiology", "subject": "CathLab Procedures", "lead": "AQ Team", "approver": "Orphan", "daysUntilDue": 2, "isOpen": true, "isClosed": false, "isOverdue": false, "isTransferred": false, "onTime": false, "turnaround": null}, {"ref": "TOF-0434-2026", "type": "TOF", "status": "Awaiting Transfer", "received": "2026-04-01", "due": "2026-04-17", "closed": "", "area": "Paediatrics", "subject": "Paediatric Gastroenterology", "lead": "AQ Team", "approver": "Orphan", "daysUntilDue": 10, "isOpen": true, "isClosed": false, "isOverdue": false, "isTransferred": false, "onTime": false, "turnaround": null}, {"ref": "COR-0502-2026", "type": "COR", "status": "Transferred", "received": "2026-04-01", "due": "2026-04-08", "closed": "", "area": "Urology", "subject": "Patient Treatment", "lead": "Transferred", "approver": "Transferred", "daysUntilDue": 1, "isOpen": false, "isClosed": false, "isOverdue": false, "isTransferred": true, "onTime": false, "turnaround": null}, {"ref": "AQW 43524/22-27", "type": "AQW", "status": "Transferred", "received": "2026-04-01", "due": "2026-04-09", "closed": "", "area": "Gynaecology", "subject": "Waiting Times", "lead": "Transferred", "approver": "Transferred", "daysUntilDue": 2, "isOpen": false, "isClosed": false, "isOverdue": false, "isTransferred": true, "onTime": false, "turnaround": null}, {"ref": "INV-0255-2026", "type": "INV", "status": "Awaiting Transfer", "received": "2026-04-02", "due": "2026-04-12", "closed": "", "area": "Facilities Management", "subject": "Official Opening of the Commercial Research Delivery Centre", "lead": "AQ Team", "approver": "Orphan", "daysUntilDue": 5, "isOpen": true, "isClosed": false, "isOverdue": false, "isTransferred": false, "onTime": false, "turnaround": null}, {"ref": "TOF-0437-2026", "type": "TOF", "status": "In Progress", "received": "2026-04-02", "due": "2026-04-20", "closed": "", "area": "Neurology", "subject": "Functional Neurological Disorder (FND)", "lead": "Bernie Mooty", "approver": "Laura Gillespie", "daysUntilDue": 13, "isOpen": true, "isClosed": false, "isOverdue": false, "isTransferred": false, "onTime": false, "turnaround": null}, {"ref": "AQW 43302/22-27", "type": "AQW", "status": "Completed", "received": "2026-04-02", "due": "2026-04-14", "closed": "2026-04-02", "area": "Governance", "subject": "Respite Care", "lead": "AQ Team", "approver": "Orphan", "daysUntilDue": 7, "isOpen": false, "isClosed": true, "isOverdue": false, "isTransferred": false, "onTime": true, "turnaround": 0}, {"ref": "TOF-0443-2026", "type": "TOF", "status": "Transferred", "received": "2026-04-03", "due": "2026-04-21", "closed": "", "area": "Cancer", "subject": "Red Flag", "lead": "Transferred", "approver": "Transferred", "daysUntilDue": 14, "isOpen": false, "isClosed": false, "isOverdue": false, "isTransferred": true, "onTime": false, "turnaround": null}, {"ref": "TOF-0444-2026", "type": "TOF", "status": "Transferred", "received": "2026-04-03", "due": "2026-04-21", "closed": "", "area": "Cancer", "subject": "Red Flag", "lead": "Transferred", "approver": "Transferred", "daysUntilDue": 14, "isOpen": false, "isClosed": false, "isOverdue": false, "isTransferred": true, "onTime": false, "turnaround": null}];
+var RAW = [];
 
 // ── STATE ─────────────────────────────────────────────────────────────────────
 var activeType='ALL', activeStatus='ALL', activeLead='', activeArea='', activeApprover='';
@@ -277,18 +277,36 @@ function gateCheck(){
   if(!e){ err.textContent='Please enter your email.'; inp.classList.add('err'); return; }
   if(!e.endsWith('@hscni.net')){ err.textContent='Access restricted to @hscni.net addresses only.'; inp.classList.add('err'); return; }
   err.textContent=''; inp.classList.remove('err');
-  document.getElementById('gate').classList.add('gone');
-  initDropdowns();
-  setSnapshotDate();
-  renderAll(filtered());
+  var btn = document.querySelector('.gate-btn');
+  btn.textContent='Loading...'; btn.disabled=true;
+  fetch('MasterLog.json?v='+Date.now())
+    .then(function(r){
+      if(!r.ok) throw new Error('HTTP '+r.status);
+      return r.json();
+    })
+    .then(function(data){
+      RAW = data;
+      document.getElementById('gate').classList.add('gone');
+      initDropdowns();
+      setSnapshotDate();
+      renderAll(filtered());
+    })
+    .catch(function(err){
+      document.getElementById('gErr').textContent='Error loading data. Please refresh and try again.';
+      btn.textContent='Access Dashboard'; btn.disabled=false;
+    });
 }
 
 // ── SNAPSHOT DATE ─────────────────────────────────────────────────────────────
 function setSnapshotDate(){
   var months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  var now = new Date();
+  var dates = RAW.filter(function(r){ return r.received; })
+                 .map(function(r){ return new Date(r.received); })
+                 .filter(function(d){ return !isNaN(d); });
+  if(!dates.length) return;
+  var latest = new Date(Math.max.apply(null, dates));
   document.getElementById('snapshotTag').textContent =
-    'Last updated: ' + now.getDate() + ' ' + months[now.getMonth()] + ' ' + now.getFullYear();
+    'Data snapshot: ' + latest.getDate() + ' ' + months[latest.getMonth()] + ' ' + latest.getFullYear();
 }
 
 // ── DROPDOWNS ─────────────────────────────────────────────────────────────────
