@@ -435,5 +435,43 @@
     "isOverdue": false,
     "turnaround": null,
     "onTime": false
+  },
+  {
+    "ref": "AQW 41982/22-27",
+    "status": "Completed",
+    "received": "2026-04-10",
+    "due": "2026-04-16",
+    "area": "Gender Services",
+    "subject": "Puberty Blockers",
+    "lead": "AQ Team",
+    "approver": "Orphan",
+    "closed": "2026-04-10",
+    "type": "AQW",
+    "daysUntilDue": 6,
+    "isOpen": false,
+    "isClosed": true,
+    "isTransferred": false,
+    "isOverdue": false,
+    "turnaround": 0,
+    "onTime": true
+  },
+  {
+    "ref": "AQW 34734/22-27",
+    "status": "In Progress",
+    "received": "2026-04-10",
+    "due": "2026-04-16",
+    "area": "Human Resources",
+    "subject": "Assaults in Trusts",
+    "lead": "AQ Team",
+    "approver": "Orphan",
+    "closed": "",
+    "type": "AQW",
+    "daysUntilDue": 6,
+    "isOpen": true,
+    "isClosed": false,
+    "isTransferred": false,
+    "isOverdue": false,
+    "turnaround": null,
+    "onTime": false
   }
 ]
