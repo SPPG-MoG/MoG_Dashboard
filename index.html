@@ -305,6 +305,7 @@ function gateCheck(){
       document.getElementById('gate').classList.add('gone');
       initDropdowns();
       setSnapshotDate();
+      setLoadTime();
       renderAll(filtered());
     })
     .catch(function(err){
