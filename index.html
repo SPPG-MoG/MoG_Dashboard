@@ -167,7 +167,7 @@ select.fsel:focus{border-color:var(--teal);}
   </div>
   <div class="topbar-right">
     <div class="data-dot"></div>
-    <div class="update-tag" id="snapshotTag">—</div>
+    <div class="update-tag" id="snapshotTag">—</div><div class="update-tag" id="loadTime" style="margin-left:8px;">—</div>
   </div>
 </div>
 
@@ -322,9 +322,14 @@ function setSnapshotDate(){
   if(!dates.length) return;
   var latest = new Date(Math.max.apply(null, dates));
   document.getElementById('snapshotTag').textContent =
-    'Data snapshot: ' + latest.getDate() + ' ' + months[latest.getMonth()] + ' ' + latest.getFullYear() + ' ' + latest.getFullYear() + ' ' + latest.getHours().toString().padStart(2,'0') + ':' + latest.getMinutes().toString().padStart(2,'0');
+    'Data snapshot: ' + latest.getDate() + ' ' + months[latest.getMonth()] + ' ' + latest.getFullYear();
 }
-
+function setLoadTime(){
+  var now=new Date();
+  var h=now.getHours().toString().padStart(2,'0');
+  var m=now.getMinutes().toString().padStart(2,'0');
+  document.getElementById('loadTime').textContent='Loaded: '+h+':'+m;
+}
 // ── DROPDOWNS ─────────────────────────────────────────────────────────────────
 function initDropdowns(){
   var leads = [...new Set(RAW.map(function(r){ return (r.lead||'').trim(); })
