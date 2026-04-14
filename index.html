@@ -156,7 +156,7 @@ select.fsel:focus{border-color:var(--teal);}
     <input class="gate-input" id="gEmail" type="email" placeholder="yourname@hscni.net" onkeydown="if(event.key==='Enter')gateCheck()">
     <div class="gate-error" id="gErr"></div>
     <button class="gate-btn" onclick="gateCheck()">Access Dashboard</button>
-    <p class="gate-note">@hscni.net addresses only &middot; Contact AQHospitalCare@hscni.net for access issues</p>
+    <p class="gate-note">@hscni.net addresses only &middot; Contact AQNCD@hscni.net for access issues</p>
   </div>
 </div>
 
@@ -322,7 +322,7 @@ function setSnapshotDate(){
   if(!dates.length) return;
   var latest = new Date(Math.max.apply(null, dates));
   document.getElementById('snapshotTag').textContent =
-    'Data snapshot: ' + latest.getDate() + ' ' + months[latest.getMonth()] + ' ' + latest.getFullYear();
+    'Data snapshot: ' + latest.getDate() + ' ' + months[latest.getMonth()] + ' ' + latest.getFullYear() + ' ' + latest.getFullYear() + ' ' + latest.getHours().toString().padStart(2,'0') + ':' + latest.getMinutes().toString().padStart(2,'0');
 }
 
 // ── DROPDOWNS ─────────────────────────────────────────────────────────────────
