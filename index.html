@@ -137,7 +137,6 @@ select.fsel:focus{border-color:var(--teal);}
 .email-link{display:inline-flex;align-items:center;gap:4px;margin-top:5px;font-family:'DM Mono',monospace;font-size:.63rem;color:var(--teal);text-decoration:none;padding:2px 7px;border:1px solid rgba(13,148,136,.3);border-radius:4px;background:var(--teal-pale);transition:all .15s;}
 .email-link:hover{background:var(--teal);color:#fff;border-color:var(--teal);}
 .email-link svg{width:10px;height:10px;flex-shrink:0;}
-.no-email{font-family:'DM Mono',monospace;font-size:.63rem;color:#cbd5e1;margin-top:5px;display:inline-block;}
 @media(max-width:680px){
   .main,.filterbar,.topbar{padding-left:16px;padding-right:16px;}
   .kpi-row{grid-template-columns:1fr 1fr;}
@@ -167,7 +166,7 @@ select.fsel:focus{border-color:var(--teal);}
   </div>
   <div class="topbar-right">
     <div class="data-dot"></div>
-    <div class="update-tag" id="snapshotTag">—</div><div class="update-tag" id="loadTime" style="margin-left:8px;">—</div>
+    <div class="update-tag" id="snapshotTag">—</div>
   </div>
 </div>
 
@@ -267,360 +266,214 @@ select.fsel:focus{border-color:var(--teal);}
 </div>
 
 <script>
-// ── CONFIG ────────────────────────────────────────────────────────────────────
-var SP_BASE = 'https://hscni.sharepoint.com/sites/HSCNI-SPPG-MCP/MoG_Emails/';
+var SP_EMAILS   ='https://hscni.sharepoint.com/sites/HSCNI-SPPG-MCP/MoG_Emails/';
+var SP_RESPONSES='https://hscni.sharepoint.com/sites/HSCNI-SPPG-MCP/MoG_Responses/';
+var RAW=[];
+var activeType='ALL',activeStatus='ALL',activeLead='',activeArea='',activeApprover='';
 
-// Cleans ref for use as a filename: trims, replaces / with -
-function cleanRef(ref){
-  return (ref||'').trim().replace(/\//g, '-');
-}
+function cleanRef(ref){ return (ref||'').trim().replace(/\//g,'-'); }
 
-function emailUrl(ref){
-  return SP_BASE + cleanRef(ref) + '.pdf';
-}
-
-// ── DATA ──────────────────────────────────────────────────────────────────────
-var RAW = [];
-
-// ── STATE ─────────────────────────────────────────────────────────────────────
-var activeType='ALL', activeStatus='ALL', activeLead='', activeArea='', activeApprover='';
-
-// ── GATE ──────────────────────────────────────────────────────────────────────
 function gateCheck(){
-  var e   = document.getElementById('gEmail').value.trim().toLowerCase();
-  var err = document.getElementById('gErr');
-  var inp = document.getElementById('gEmail');
-  if(!e){ err.textContent='Please enter your email.'; inp.classList.add('err'); return; }
-  if(!e.endsWith('@hscni.net')){ err.textContent='Access restricted to @hscni.net addresses only.'; inp.classList.add('err'); return; }
-  err.textContent=''; inp.classList.remove('err');
-  var btn = document.querySelector('.gate-btn');
-  btn.textContent='Loading...'; btn.disabled=true;
+  var e=document.getElementById('gEmail').value.trim().toLowerCase();
+  var err=document.getElementById('gErr');
+  var inp=document.getElementById('gEmail');
+  if(!e){err.textContent='Please enter your email.';inp.classList.add('err');return;}
+  if(!e.endsWith('@hscni.net')){err.textContent='Access restricted to @hscni.net addresses only.';inp.classList.add('err');return;}
+  err.textContent='';inp.classList.remove('err');
+  var btn=document.querySelector('.gate-btn');
+  btn.textContent='Loading...';btn.disabled=true;
   fetch('MasterLog.json?v='+Date.now())
-    .then(function(r){
-      if(!r.ok) throw new Error('HTTP '+r.status);
-      return r.json();
-    })
+    .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();})
     .then(function(data){
-      RAW = data;
+      RAW=data.cases||data;
       document.getElementById('gate').classList.add('gone');
       initDropdowns();
-      setSnapshotDate();
-      setLoadTime();
+      setSnapshotTag(data.updated||null);
       renderAll(filtered());
     })
-    .catch(function(err){
+    .catch(function(){
       document.getElementById('gErr').textContent='Error loading data. Please refresh and try again.';
-      btn.textContent='Access Dashboard'; btn.disabled=false;
+      btn.textContent='Access Dashboard';btn.disabled=false;
     });
 }
 
-// ── SNAPSHOT DATE ─────────────────────────────────────────────────────────────
-function setSnapshotDate(){
+function setSnapshotTag(updated){
   var months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  var dates = RAW.filter(function(r){ return r.received; })
-                 .map(function(r){ return new Date(r.received); })
-                 .filter(function(d){ return !isNaN(d); });
-  if(!dates.length) return;
-  var latest = new Date(Math.max.apply(null, dates));
-  document.getElementById('snapshotTag').textContent =
-    'Data snapshot: ' + latest.getDate() + ' ' + months[latest.getMonth()] + ' ' + latest.getFullYear();
-}
-function setLoadTime(){
-  var now=new Date();
-  var h=now.getHours().toString().padStart(2,'0');
-  var m=now.getMinutes().toString().padStart(2,'0');
-  document.getElementById('loadTime').textContent='Loaded: '+h+':'+m;
-}
-// ── DROPDOWNS ─────────────────────────────────────────────────────────────────
-function initDropdowns(){
-  var leads = [...new Set(RAW.map(function(r){ return (r.lead||'').trim(); })
-    .filter(function(l){ return l && l!=='Transferred' && l!=='Orphan'; }))].sort();
-  var approvers = [...new Set(RAW.map(function(r){ return (r.approver||'').trim(); })
-    .filter(Boolean))].sort();
-  var areas = [...new Set(RAW.map(function(r){ return (r.area||'').trim(); })
-    .filter(Boolean))].sort();
-
-  function populate(id, items){
-    var sel = document.getElementById(id);
-    items.forEach(function(v){
-      var o = document.createElement('option'); o.value=v; o.textContent=v; sel.appendChild(o);
-    });
+  var tag=document.getElementById('snapshotTag');
+  if(updated){
+    var d=new Date(updated);
+    var h=d.getHours().toString().padStart(2,'0');
+    var m=d.getMinutes().toString().padStart(2,'0');
+    tag.textContent='Updated: '+d.getDate()+' '+months[d.getMonth()]+' '+d.getFullYear()+' '+h+':'+m;
+  } else {
+    tag.textContent='Updated: —';
   }
-  populate('leadFilter', leads);
-  populate('approverFilter', approvers);
-  populate('areaFilter', areas);
 }
 
-// ── FILTER ENGINE ─────────────────────────────────────────────────────────────
+function initDropdowns(){
+  var leads=[...new Set(RAW.map(function(r){return (r.lead||'').trim();}).filter(function(l){return l&&l!=='Transferred'&&l!=='Orphan';}))].sort();
+  var approvers=[...new Set(RAW.map(function(r){return (r.approver||'').trim();}).filter(Boolean))].sort();
+  var areas=[...new Set(RAW.map(function(r){return (r.area||'').trim();}).filter(Boolean))].sort();
+  function populate(id,items){var sel=document.getElementById(id);items.forEach(function(v){var o=document.createElement('option');o.value=v;o.textContent=v;sel.appendChild(o);});}
+  populate('leadFilter',leads);populate('approverFilter',approvers);populate('areaFilter',areas);
+}
+
 function filtered(){
   return RAW.filter(function(r){
-    if(activeType!=='ALL' && r.type!==activeType) return false;
-    if(activeStatus==='OPEN'    && !r.isOpen)     return false;
-    if(activeStatus==='OVERDUE' && !r.isOverdue)  return false;
-    if(activeStatus==='CLOSED'  && !r.isClosed)   return false;
-    if(activeLead     && (r.lead||'').trim()!==activeLead)         return false;
-    if(activeArea     && (r.area||'').trim()!==activeArea)         return false;
-    if(activeApprover && (r.approver||'').trim()!==activeApprover) return false;
+    if(activeType!=='ALL'&&r.type!==activeType)return false;
+    if(activeStatus==='OPEN'&&!r.isOpen)return false;
+    if(activeStatus==='OVERDUE'&&!r.isOverdue)return false;
+    if(activeStatus==='CLOSED'&&!r.isClosed)return false;
+    if(activeLead&&(r.lead||'').trim()!==activeLead)return false;
+    if(activeArea&&(r.area||'').trim()!==activeArea)return false;
+    if(activeApprover&&(r.approver||'').trim()!==activeApprover)return false;
     return true;
   });
 }
 
-function applyFilters(){
-  activeLead     = document.getElementById('leadFilter').value     || '';
-  activeArea     = document.getElementById('areaFilter').value     || '';
-  activeApprover = document.getElementById('approverFilter').value || '';
-  renderAll(filtered());
-}
+function applyFilters(){activeLead=document.getElementById('leadFilter').value||'';activeArea=document.getElementById('areaFilter').value||'';activeApprover=document.getElementById('approverFilter').value||'';renderAll(filtered());}
+function toggleType(t,el){activeType=t;document.querySelectorAll('#typeFilters .ftag').forEach(function(e){e.classList.remove('active');});el.classList.add('active');renderAll(filtered());}
+function toggleStatus(s,el){activeStatus=s;document.querySelectorAll('#statusFilters .ftag').forEach(function(e){e.classList.remove('active','active-red','active-amber');});el.classList.add(s==='OVERDUE'?'active-red':s==='OPEN'?'active-amber':'active');renderAll(filtered());}
+function clearFilters(){activeType='ALL';activeStatus='ALL';activeLead='';activeArea='';activeApprover='';document.getElementById('leadFilter').value='';document.getElementById('areaFilter').value='';document.getElementById('approverFilter').value='';document.querySelectorAll('#typeFilters .ftag').forEach(function(e,i){e.classList.toggle('active',i===0);});document.querySelectorAll('#statusFilters .ftag').forEach(function(e,i){e.classList.toggle('active',i===0);e.classList.remove('active-red','active-amber');});renderAll(filtered());}
 
-function toggleType(t,el){
-  activeType=t;
-  document.querySelectorAll('#typeFilters .ftag').forEach(function(e){ e.classList.remove('active'); });
-  el.classList.add('active');
-  renderAll(filtered());
-}
+function renderAll(data){renderKPIs(data);renderUrgency(data);renderCaseTypes(data);renderRing(data);renderAreaChart(data);renderLeadChart(data);renderApproverChart(data);renderOverdueList(data);renderDueSoonList(data);renderAllList(data);}
 
-function toggleStatus(s,el){
-  activeStatus=s;
-  document.querySelectorAll('#statusFilters .ftag').forEach(function(e){
-    e.classList.remove('active','active-red','active-amber');
-  });
-  el.classList.add(s==='OVERDUE'?'active-red':s==='OPEN'?'active-amber':'active');
-  renderAll(filtered());
-}
-
-function clearFilters(){
-  activeType='ALL'; activeStatus='ALL'; activeLead=''; activeArea=''; activeApprover='';
-  document.getElementById('leadFilter').value='';
-  document.getElementById('areaFilter').value='';
-  document.getElementById('approverFilter').value='';
-  document.querySelectorAll('#typeFilters .ftag').forEach(function(e,i){ e.classList.toggle('active',i===0); });
-  document.querySelectorAll('#statusFilters .ftag').forEach(function(e,i){
-    e.classList.toggle('active',i===0); e.classList.remove('active-red','active-amber');
-  });
-  renderAll(filtered());
-}
-
-// ── MASTER RENDER ─────────────────────────────────────────────────────────────
-function renderAll(data){
-  renderKPIs(data);
-  renderUrgency(data);
-  renderCaseTypes(data);
-  renderRing(data);
-  renderAreaChart(data);
-  renderLeadChart(data);
-  renderApproverChart(data);
-  renderOverdueList(data);
-  renderDueSoonList(data);
-  renderAllList(data);
-}
-
-// ── KPIs ──────────────────────────────────────────────────────────────────────
 function renderKPIs(data){
-  var open       = data.filter(function(r){ return r.isOpen; }).length;
-  var overdue    = data.filter(function(r){ return r.isOverdue; }).length;
-  var closed     = data.filter(function(r){ return r.isClosed; }).length;
-  var transferred= data.filter(function(r){ return r.isTransferred; }).length;
-  var onTime     = data.filter(function(r){ return r.isClosed && r.onTime; }).length;
-  var pctOverdue = open>0 ? Math.round(overdue/open*100) : 0;
-  var pctOnTime  = closed>0 ? Math.round(onTime/closed*100) : 0;
-  var turns      = data.filter(function(r){ return r.isClosed && r.turnaround!==null && r.turnaround>=0; })
-                       .map(function(r){ return r.turnaround; });
-  var avgTurn    = turns.length>0 ? Math.round(turns.reduce(function(a,b){return a+b;},0)/turns.length) : 0;
-
-  document.getElementById('kOpenCases').textContent  = open;
-  document.getElementById('kOverdue').textContent    = overdue;
-  document.getElementById('kPctOverdue').textContent = pctOverdue+'%';
-  document.getElementById('kClosed').textContent     = closed;
-  document.getElementById('kOnTime').textContent     = pctOnTime+'%';
-  document.getElementById('kAvgTurn').textContent    = avgTurn+'d';
-  document.getElementById('kTotal').textContent      = data.length;
-  document.getElementById('kTransferred').textContent= transferred;
+  var open=data.filter(function(r){return r.isOpen;}).length;
+  var overdue=data.filter(function(r){return r.isOverdue;}).length;
+  var closed=data.filter(function(r){return r.isClosed;}).length;
+  var transferred=data.filter(function(r){return r.isTransferred;}).length;
+  var onTime=data.filter(function(r){return r.isClosed&&r.onTime;}).length;
+  var pctOverdue=open>0?Math.round(overdue/open*100):0;
+  var pctOnTime=closed>0?Math.round(onTime/closed*100):0;
+  var turns=data.filter(function(r){return r.isClosed&&r.turnaround!==null&&r.turnaround>=0;}).map(function(r){return r.turnaround;});
+  var avgTurn=turns.length>0?Math.round(turns.reduce(function(a,b){return a+b;},0)/turns.length):0;
+  document.getElementById('kOpenCases').textContent=open;
+  document.getElementById('kOverdue').textContent=overdue;
+  document.getElementById('kPctOverdue').textContent=pctOverdue+'%';
+  document.getElementById('kClosed').textContent=closed;
+  document.getElementById('kOnTime').textContent=pctOnTime+'%';
+  document.getElementById('kAvgTurn').textContent=avgTurn+'d';
+  document.getElementById('kTotal').textContent=data.length;
+  document.getElementById('kTransferred').textContent=transferred;
 }
 
-// ── URGENCY ───────────────────────────────────────────────────────────────────
 function renderUrgency(data){
-  var open = data.filter(function(r){ return r.isOpen && !r.isOverdue; });
-  document.getElementById('uDue1').textContent  = open.filter(function(r){ return r.daysUntilDue!==null&&r.daysUntilDue<=1&&r.daysUntilDue>=0; }).length;
-  document.getElementById('uDue3').textContent  = open.filter(function(r){ return r.daysUntilDue!==null&&r.daysUntilDue<=3&&r.daysUntilDue>=0; }).length;
-  document.getElementById('uDue5').textContent  = open.filter(function(r){ return r.daysUntilDue!==null&&r.daysUntilDue<=5&&r.daysUntilDue>=0; }).length;
-  document.getElementById('uDue10').textContent = open.filter(function(r){ return r.daysUntilDue!==null&&r.daysUntilDue<=10&&r.daysUntilDue>=0; }).length;
+  var open=data.filter(function(r){return r.isOpen&&!r.isOverdue;});
+  document.getElementById('uDue1').textContent=open.filter(function(r){return r.daysUntilDue!==null&&r.daysUntilDue<=1&&r.daysUntilDue>=0;}).length;
+  document.getElementById('uDue3').textContent=open.filter(function(r){return r.daysUntilDue!==null&&r.daysUntilDue<=3&&r.daysUntilDue>=0;}).length;
+  document.getElementById('uDue5').textContent=open.filter(function(r){return r.daysUntilDue!==null&&r.daysUntilDue<=5&&r.daysUntilDue>=0;}).length;
+  document.getElementById('uDue10').textContent=open.filter(function(r){return r.daysUntilDue!==null&&r.daysUntilDue<=10&&r.daysUntilDue>=0;}).length;
 }
 
-// ── CASE TYPES ────────────────────────────────────────────────────────────────
 function renderCaseTypes(data){
   ['AQW','AQO','COR','INV','TOF'].forEach(function(t){
-    var subset = data.filter(function(r){ return r.type===t; });
-    var open   = subset.filter(function(r){ return r.isOpen; }).length;
-    document.getElementById('ct-'+t).textContent    = subset.length;
-    document.getElementById('ctsub-'+t).textContent = open+' open';
+    var subset=data.filter(function(r){return r.type===t;});
+    var open=subset.filter(function(r){return r.isOpen;}).length;
+    document.getElementById('ct-'+t).textContent=subset.length;
+    document.getElementById('ctsub-'+t).textContent=open+' open';
   });
-  document.getElementById('ctBadge').textContent = activeType==='ALL'?'All':activeType;
+  document.getElementById('ctBadge').textContent=activeType==='ALL'?'All':activeType;
 }
 
-// ── RING CHART ────────────────────────────────────────────────────────────────
 function renderRing(data){
-  var closed  = data.filter(function(r){ return r.isClosed; });
-  var onTime  = closed.filter(function(r){ return r.onTime===true; }).length;
-  var late    = closed.filter(function(r){ return r.onTime===false; }).length;
-  var overdue = data.filter(function(r){ return r.isOverdue; }).length;
-  var openOk  = data.filter(function(r){ return r.isOpen && !r.isOverdue; }).length;
-  var total   = onTime+late+overdue+openOk || 1;
-  var pct     = closed.length>0 ? Math.round(onTime/closed.length*100) : 0;
-
-  document.getElementById('ringPct').textContent     = pct+'%';
-  document.getElementById('rl-ontime').textContent   = onTime+' completed on time';
-  document.getElementById('rl-late').textContent     = late+' completed late';
-  document.getElementById('rl-overdue').textContent  = overdue+' open & overdue';
-  document.getElementById('rl-open').textContent     = openOk+' open & on track';
-
-  var canvas = document.getElementById('ringCanvas');
-  if(!canvas) return;
-  var ctx = canvas.getContext('2d');
-  var cx=65, cy=65, r=48, lw=14;
+  var closed=data.filter(function(r){return r.isClosed;});
+  var onTime=closed.filter(function(r){return r.onTime===true;}).length;
+  var late=closed.filter(function(r){return r.onTime===false;}).length;
+  var overdue=data.filter(function(r){return r.isOverdue;}).length;
+  var openOk=data.filter(function(r){return r.isOpen&&!r.isOverdue;}).length;
+  var total=onTime+late+overdue+openOk||1;
+  var pct=closed.length>0?Math.round(onTime/closed.length*100):0;
+  document.getElementById('ringPct').textContent=pct+'%';
+  document.getElementById('rl-ontime').textContent=onTime+' completed on time';
+  document.getElementById('rl-late').textContent=late+' completed late';
+  document.getElementById('rl-overdue').textContent=overdue+' open & overdue';
+  document.getElementById('rl-open').textContent=openOk+' open & on track';
+  var canvas=document.getElementById('ringCanvas');
+  if(!canvas)return;
+  var ctx=canvas.getContext('2d');
+  var cx=65,cy=65,r=48,lw=14;
   ctx.clearRect(0,0,130,130);
-
-  var SEGMENTS = [
-    { val: onTime,  color: '#16a34a' },
-    { val: late,    color: '#d97706' },
-    { val: overdue, color: '#dc2626' },
-    { val: openOk,  color: '#0d9488' }
-  ].filter(function(s){ return s.val>0; });
-
-  if(!SEGMENTS.length){
-    ctx.beginPath(); ctx.arc(cx,cy,r,0,2*Math.PI);
-    ctx.strokeStyle='#f1f5f9'; ctx.lineWidth=lw; ctx.stroke(); return;
-  }
-
-  var gap=0.03, totalGap=gap*SEGMENTS.length, start=-Math.PI/2;
-  SEGMENTS.forEach(function(s){
-    var sweep = (s.val/total)*(2*Math.PI-totalGap);
-    ctx.beginPath(); ctx.arc(cx,cy,r,start,start+sweep);
-    ctx.strokeStyle=s.color; ctx.lineWidth=lw; ctx.lineCap='round'; ctx.stroke();
-    start+=sweep+gap;
-  });
+  var SEGMENTS=[{val:onTime,color:'#16a34a'},{val:late,color:'#d97706'},{val:overdue,color:'#dc2626'},{val:openOk,color:'#0d9488'}].filter(function(s){return s.val>0;});
+  if(!SEGMENTS.length){ctx.beginPath();ctx.arc(cx,cy,r,0,2*Math.PI);ctx.strokeStyle='#f1f5f9';ctx.lineWidth=lw;ctx.stroke();return;}
+  var gap=0.03,totalGap=gap*SEGMENTS.length,start=-Math.PI/2;
+  SEGMENTS.forEach(function(s){var sweep=(s.val/total)*(2*Math.PI-totalGap);ctx.beginPath();ctx.arc(cx,cy,r,start,start+sweep);ctx.strokeStyle=s.color;ctx.lineWidth=lw;ctx.lineCap='round';ctx.stroke();start+=sweep+gap;});
 }
 
-// ── BAR HELPER ────────────────────────────────────────────────────────────────
-function bar(label,count,max,cls){
-  var pct=max>0?Math.round(count/max*100):0;
-  return '<div class="bar-row"><div class="bar-label" title="'+label+'">'+label+'</div>'+
-         '<div class="bar-track"><div class="bar-fill '+(cls||'')+'" style="width:'+pct+'%"></div></div>'+
-         '<div class="bar-count">'+count+'</div></div>';
-}
+function bar(label,count,max,cls){var pct=max>0?Math.round(count/max*100):0;return '<div class="bar-row"><div class="bar-label" title="'+label+'">'+label+'</div><div class="bar-track"><div class="bar-fill '+(cls||'')+'" style="width:'+pct+'%"></div></div><div class="bar-count">'+count+'</div></div>';}
 
-// ── CHARTS ────────────────────────────────────────────────────────────────────
 function renderAreaChart(data){
-  var open=data.filter(function(r){ return r.isOpen; });
+  var open=data.filter(function(r){return r.isOpen;});
   var counts={};
-  open.forEach(function(r){ var a=(r.area||'').trim(); counts[a]=(counts[a]||0)+1; });
+  open.forEach(function(r){var a=(r.area||'').trim();counts[a]=(counts[a]||0)+1;});
   var sorted=Object.entries(counts).sort(function(a,b){return b[1]-a[1];}).slice(0,15);
   var max=sorted.length?sorted[0][1]:1;
-  document.getElementById('areaChart').innerHTML=sorted.length?
-    sorted.map(function(e){return bar(e[0],e[1],max,'teal');}).join(''):
-    '<div class="no-results">No open cases.</div>';
+  document.getElementById('areaChart').innerHTML=sorted.length?sorted.map(function(e){return bar(e[0],e[1],max,'teal');}).join(''):'<div class="no-results">No open cases.</div>';
 }
 
 function renderLeadChart(data){
-  var open=data.filter(function(r){ return r.isOpen; });
+  var open=data.filter(function(r){return r.isOpen;});
   var counts={};
-  open.forEach(function(r){ var l=(r.lead||'').trim(); if(l) counts[l]=(counts[l]||0)+1; });
+  open.forEach(function(r){var l=(r.lead||'').trim();if(l)counts[l]=(counts[l]||0)+1;});
   var sorted=Object.entries(counts).sort(function(a,b){return b[1]-a[1];}).slice(0,12);
   var max=sorted.length?sorted[0][1]:1;
-  document.getElementById('leadChart').innerHTML=sorted.length?
-    sorted.map(function(e){
-      var od=open.filter(function(r){return (r.lead||'').trim()===e[0]&&r.isOverdue;}).length;
-      var cls=od>e[1]*.7?'red':od>e[1]*.4?'amber':'teal';
-      return bar(e[0],e[1],max,cls);
-    }).join(''):'<div class="no-results">No data.</div>';
+  document.getElementById('leadChart').innerHTML=sorted.length?sorted.map(function(e){var od=open.filter(function(r){return (r.lead||'').trim()===e[0]&&r.isOverdue;}).length;var cls=od>e[1]*.7?'red':od>e[1]*.4?'amber':'teal';return bar(e[0],e[1],max,cls);}).join(''):'<div class="no-results">No data.</div>';
 }
 
 function renderApproverChart(data){
-  var open=data.filter(function(r){ return r.isOpen; });
+  var open=data.filter(function(r){return r.isOpen;});
   var counts={};
-  open.forEach(function(r){ var a=(r.approver||'').trim(); if(a) counts[a]=(counts[a]||0)+1; });
+  open.forEach(function(r){var a=(r.approver||'').trim();if(a)counts[a]=(counts[a]||0)+1;});
   var sorted=Object.entries(counts).sort(function(a,b){return b[1]-a[1];}).slice(0,12);
   var max=sorted.length?sorted[0][1]:1;
-  document.getElementById('approverChart').innerHTML=sorted.length?
-    sorted.map(function(e){
-      var od=open.filter(function(r){return (r.approver||'').trim()===e[0]&&r.isOverdue;}).length;
-      var cls=od>e[1]*.7?'red':od>e[1]*.4?'amber':'teal';
-      return bar(e[0],e[1],max,cls);
-    }).join(''):'<div class="no-results">No data.</div>';
+  document.getElementById('approverChart').innerHTML=sorted.length?sorted.map(function(e){var od=open.filter(function(r){return (r.approver||'').trim()===e[0]&&r.isOverdue;}).length;var cls=od>e[1]*.7?'red':od>e[1]*.4?'amber':'teal';return bar(e[0],e[1],max,cls);}).join(''):'<div class="no-results">No data.</div>';
 }
 
-// ── STATUS PILL & DAYS TAG ────────────────────────────────────────────────────
 function statusPill(r){
-  if(r.isTransferred)              return '<span class="status-pill pill-grey">Transferred</span>';
-  if(r.isOverdue)                  return '<span class="status-pill pill-red">Overdue</span>';
-  if(r.isClosed && r.onTime)       return '<span class="status-pill pill-green">On Time</span>';
-  if(r.isClosed && !r.onTime)      return '<span class="status-pill pill-amber">Late</span>';
-  if(r.isOpen)                     return '<span class="status-pill pill-blue">'+r.status+'</span>';
+  if(r.isTransferred)return '<span class="status-pill pill-grey">Transferred</span>';
+  if(r.isOverdue)return '<span class="status-pill pill-red">Overdue</span>';
+  if(r.isClosed&&r.onTime)return '<span class="status-pill pill-green">On Time</span>';
+  if(r.isClosed&&!r.onTime)return '<span class="status-pill pill-amber">Late</span>';
+  if(r.isOpen)return '<span class="status-pill pill-blue">'+r.status+'</span>';
   return '<span class="status-pill pill-grey">'+r.status+'</span>';
 }
 
 function daysTag(r){
-  if(!r.isOpen) return '';
-  if(r.isOverdue) return '<div class="case-days overdue-days">'+Math.abs(r.daysUntilDue||0)+'d overdue</div>';
-  if(r.daysUntilDue!==null&&r.daysUntilDue<=5) return '<div class="case-days due-days">Due in '+r.daysUntilDue+'d</div>';
+  if(!r.isOpen)return '';
+  if(r.isOverdue)return '<div class="case-days overdue-days">'+Math.abs(r.daysUntilDue||0)+'d overdue</div>';
+  if(r.daysUntilDue!==null&&r.daysUntilDue<=5)return '<div class="case-days due-days">Due in '+r.daysUntilDue+'d</div>';
   return '';
 }
 
-// ── EMAIL LINK ────────────────────────────────────────────────────────────────
 function emailTag(r){
   if(r.isClosed){
-    var url='https://hscni.sharepoint.com/sites/HSCNI-SPPG-MCP/MoG_Responses/'+cleanRef(r.ref)+'.pdf';
-    return '<a class="email-link" href="'+url+'" target="_blank" style="background:#f0fdf4;border-color:rgba(22,163,74,.3);color:#16a34a;">'+
-      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>'+
-      'View Response</a>';
+    var url=SP_RESPONSES+cleanRef(r.ref)+'.pdf';
+    return '<a class="email-link" href="'+url+'" target="_blank" style="background:#f0fdf4;border-color:rgba(22,163,74,.3);color:#16a34a;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>View Response</a>';
   }
-  var url='https://hscni.sharepoint.com/sites/HSCNI-SPPG-MCP/MoG_Emails/'+cleanRef(r.ref)+'.pdf';
-  return '<a class="email-link" href="'+url+'" target="_blank">'+
-    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 7l10 7 10-7"/></svg>'+
-    'View Email</a>';
+  var url=SP_EMAILS+cleanRef(r.ref)+'.pdf';
+  return '<a class="email-link" href="'+url+'" target="_blank"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 7l10 7 10-7"/></svg>View Email</a>';
 }
 
 function caseItem(r){
-  return '<div class="case-item">'+
-    '<div class="case-ref">'+r.ref.trim()+'</div>'+
-    '<div class="case-meta">'+
-      '<div class="case-area">'+r.area+'</div>'+
-      '<div class="case-lead">'+(r.lead||'—')+' · '+r.type+' · Due: '+(r.due||'—')+'</div>'+
-      emailTag(r)+
-    '</div>'+
-    '<div class="case-status">'+statusPill(r)+daysTag(r)+'</div>'+
-  '</div>';
+  return '<div class="case-item"><div class="case-ref">'+r.ref.trim()+'</div><div class="case-meta"><div class="case-area">'+r.area+'</div><div class="case-lead">'+(r.lead||'—')+' · '+r.type+' · Due: '+(r.due||'—')+'</div>'+emailTag(r)+'</div><div class="case-status">'+statusPill(r)+daysTag(r)+'</div></div>';
 }
 
-// ── LISTS ─────────────────────────────────────────────────────────────────────
 function renderOverdueList(data){
-  var items=data.filter(function(r){return r.isOverdue;})
-               .sort(function(a,b){return (a.daysUntilDue||0)-(b.daysUntilDue||0);});
+  var items=data.filter(function(r){return r.isOverdue;}).sort(function(a,b){return (a.daysUntilDue||0)-(b.daysUntilDue||0);});
   document.getElementById('overdueCount').textContent=items.length;
-  document.getElementById('overdueList').innerHTML=items.length?
-    items.map(caseItem).join(''):
-    '<div class="no-results">No overdue cases &#127881;</div>';
+  document.getElementById('overdueList').innerHTML=items.length?items.map(caseItem).join(''):'<div class="no-results">No overdue cases &#127881;</div>';
 }
 
 function renderDueSoonList(data){
-  var items=data.filter(function(r){
-    return r.isOpen&&!r.isOverdue&&r.daysUntilDue!==null&&r.daysUntilDue<=5;
-  }).sort(function(a,b){return a.daysUntilDue-b.daysUntilDue;});
+  var items=data.filter(function(r){return r.isOpen&&!r.isOverdue&&r.daysUntilDue!==null&&r.daysUntilDue<=5;}).sort(function(a,b){return a.daysUntilDue-b.daysUntilDue;});
   document.getElementById('dueSoonCount').textContent=items.length;
-  document.getElementById('dueSoonList').innerHTML=items.length?
-    items.map(caseItem).join(''):
-    '<div class="no-results">No cases due in 5 days.</div>';
+  document.getElementById('dueSoonList').innerHTML=items.length?items.map(caseItem).join(''):'<div class="no-results">No cases due in 5 days.</div>';
 }
 
 function renderAllList(data){
-  var sorted=[...data].sort(function(a,b){
-    if(a.isOverdue&&!b.isOverdue) return -1;
-    if(!a.isOverdue&&b.isOverdue) return 1;
-    return (a.daysUntilDue||999)-(b.daysUntilDue||999);
-  });
+  var sorted=[...data].sort(function(a,b){if(a.isOverdue&&!b.isOverdue)return -1;if(!a.isOverdue&&b.isOverdue)return 1;return (a.daysUntilDue||999)-(b.daysUntilDue||999);});
   document.getElementById('allCount').textContent=sorted.length;
-  document.getElementById('allList').innerHTML=sorted.length?
-    sorted.map(caseItem).join(''):
-    '<div class="no-results">No cases match filters.</div>';
+  document.getElementById('allList').innerHTML=sorted.length?sorted.map(caseItem).join(''):'<div class="no-results">No cases match filters.</div>';
 }
 </script>
 </body>
